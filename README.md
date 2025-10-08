@@ -1,105 +1,284 @@
-# Letta Chat Client
+# Animus Chat - Letta Simple Chat Client
 
-A simple, clean text-based chat client for Letta AI agents.
+A simple, powerful text-based chat client for interacting with Letta AI agents. Built with Python and designed for developers who want a clean, terminal-based interface without the complexity of web UIs.
 
-## Features
+## 🚀 Features
 
-- Simple text interface - no complex UI
-- Real-time message streaming
-- Agent selection and management
-- Configuration stored in `.env` file
-- Idempotent - can be run multiple times safely
+- **Simple Text Interface**: Clean, distraction-free terminal chat experience
+- **Real-time Streaming**: Live token-by-token response streaming from Letta agents
+- **Agent Management**: Easy agent selection by name or number from available agents
+- **Cross-platform**: Works on Windows, macOS, and Linux
+- **Emoji Support**: Full Unicode and emoji support with Windows compatibility
+- **No Database**: All configuration and state stored in `.env` file
+- **Comprehensive Testing**: 100% test coverage on core functionality
+- **Idempotent Setup**: Safe to run configuration multiple times
 
-## Quick Start
+## 📋 Requirements
 
-### 1. Install Dependencies
+- Python 3.8+
+- Letta API access (server URL and API token)
+- Internet connection
+
+## 🛠️ Installation
+
+### 1. Clone the Repository
 
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/AnimusUNO/animus-chat.git
+cd animus-chat
 ```
 
-### 2. Configure Environment
+### 2. Set Up Virtual Environment
 
-Run the interactive setup to configure your environment:
+   ```bash
+# Create virtual environment
+   python -m venv venv
 
-```bash
-python config.py
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
 ```
 
-This will:
-- Ask for your Letta server URL
-- Ask for your API token
-- Test the connection to verify credentials
-- Fetch available agents and let you select a default
-- Save everything to `.env` file
+### 3. Install Dependencies
 
-Alternatively, you can manually copy and edit the environment file:
+   ```bash
+# Install main dependencies
+   pip install -r requirements.txt
+
+# Install test dependencies (optional)
+pip install -r requirements-test.txt
+```
+
+### 4. Configure Environment
 
 ```bash
+# Copy the example environment file
 copy env.example .env
+
+# Edit .env with your Letta server details
+notepad .env  # Windows
+# or
+nano .env     # Linux/macOS
 ```
 
-Edit `.env` with your Letta server details:
+### 5. Configure Your .env File
 
-```env
-LETTA_SERVER_URL=https://your-letta-server.com:8283
-LETTA_API_TOKEN=your_api_token_here
+   ```env
+# Letta Server Configuration
+   LETTA_SERVER_URL=https://your-letta-server.com:8283
+   LETTA_API_TOKEN=your_api_token_here
+
+# User Configuration
 DISPLAY_NAME=YourName
-DEFAULT_AGENT_ID=your_agent_id_here
+DEFAULT_AGENT_ID=your_preferred_agent_id
 ```
 
-### 3. Run the Client
+## 🎯 Usage
+
+### Start the Chat Client
 
 ```bash
 python main.py
 ```
 
-## Usage
+### Available Commands
 
-### Commands
+- `/help` - Show available commands
+- `/status` - Display connection status and current agent
+- `/agents` - List all available agents
+- `/agent <id>` or `/agent <number>` - Switch to specific agent
+- `/clear` - Clear the screen
+- `/quit` - Exit the application
 
-- `/help` - Show help
-- `/status` - Show connection status
-- `/agents` - List available agents
-- `/agent <id>` - Set agent by ID
-- `/clear` - Clear screen
-- `/quit` - Exit
-
-### Chat
-
-Just type your message and press Enter to send it to the selected agent.
-
-## File Structure
+### Example Session
 
 ```
-TUI-chat/
-├── docs/
-│   ├── PROJECT_PLAN.md
+============================================================
+           LETTA SIMPLE CHAT CLIENT
+============================================================
+
+Testing connection to Letta server...
+Connected successfully!
+Fetching available agents...
+Found 10 agents:
+  1. IncredibleBroccoli (ID: agent-c1e3ba04-7dd5-4c36-8ae8-96b476b6eaa8)
+  2. Puddy the Bear (ID: agent-add8c834-1677-4d81-a3d0-7d6d68b55262)
+  ...
+
+Set agent: agent-8d3f7375-9bb5-446a-924d-89962e7f97d3
+
+Server: https://sanctum.zero1.network
+User: YourName
+Agent: Iris (agent-8d3f7375-9bb5-446a-924d-89962e7f97d3)
+------------------------------------------------------------
+
+[YourName] Hello, how are you today?
+[Iris] Hello! I'm doing well, thank you for asking. I'm here and ready to help you with whatever you need. How are you doing today? Is there anything specific I can assist you with?
+
+[YourName] /agent 2
+Set agent: Puddy the Bear (agent-add8c834-1677-4d81-a3d0-7d6d68b55262)
+
+[YourName] Tell me a story
+[Puddy the Bear] Once upon a time, in a cozy little forest...
+```
+
+## 🧪 Testing
+
+### Run All Tests
+
+```bash
+python run_tests.py
+```
+
+### Run Specific Test Categories
+
+```bash
+# Unit tests only
+pytest tests/test_config.py tests/test_letta_client.py
+
+# Integration tests
+pytest tests/test_integration.py
+
+# End-to-end tests
+pytest tests/test_simple_chat.py
+
+# With coverage report
+pytest --cov=simple_chat --cov-report=html
+```
+
+### Test Coverage
+
+The project maintains 100% test coverage on `simple_chat.py` and comprehensive coverage across all modules:
+
+- **Unit Tests**: Individual component testing
+- **Integration Tests**: Module interaction testing  
+- **End-to-End Tests**: Full application workflow testing
+
+## 📁 Project Structure
+
+```
+animus-chat/
+├── docs/                    # Documentation
+│   ├── PROJECT_PLAN.md     # Development roadmap
 │   └── letta-api-reference.md
-├── simple_chat.py      # Main chat interface
-├── config.py          # Configuration management
-├── letta_client.py    # Letta API wrapper
-├── main.py            # Entry point
-├── requirements.txt   # Dependencies
-├── env.example       # Environment template
-└── README.md         # This file
+├── tests/                   # Test suite
+│   ├── conftest.py         # Test fixtures
+│   ├── test_config.py      # Config module tests
+│   ├── test_integration.py # Integration tests
+│   ├── test_letta_client.py # API client tests
+│   └── test_simple_chat.py # Main app tests
+├── config.py               # Configuration management
+├── letta_api.py           # Letta API wrapper
+├── main.py                # Application entry point
+├── simple_chat.py         # Core chat interface
+├── requirements.txt       # Main dependencies
+├── requirements-test.txt  # Test dependencies
+├── pytest.ini            # Pytest configuration
+├── run_tests.py          # Test runner script
+├── env.example           # Environment template
+└── README.md             # This file
 ```
 
-## Configuration
+## 🔧 Configuration
 
-All configuration is stored in the `.env` file:
+### Environment Variables
 
-- `LETTA_SERVER_URL` - Your Letta server URL
-- `LETTA_API_TOKEN` - Your API token
-- `DISPLAY_NAME` - Your display name in chat
-- `DEFAULT_AGENT_ID` - Agent to use by default
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `LETTA_SERVER_URL` | Letta server endpoint | Yes | - |
+| `LETTA_API_TOKEN` | API authentication token | Yes | - |
+| `DISPLAY_NAME` | Your display name in chat | No | "User" |
+| `DEFAULT_AGENT_ID` | Preferred agent ID | No | - |
 
-## Troubleshooting
+### Configuration Features
 
-1. **Connection failed**: Check your `LETTA_SERVER_URL` and `LETTA_API_TOKEN`
-2. **No agents found**: Verify your API token has access to agents
-3. **Agent not responding**: Check the agent ID is correct
+- **Idempotent**: Safe to run `config.py` multiple times
+- **Validation**: Checks for required values and valid URLs
+- **Auto-save**: Automatically saves configuration to `.env`
+- **Error Handling**: Clear error messages for configuration issues
 
-## Development
+## 🚀 Development
 
-This is a minimal implementation focused on core functionality. The codebase is intentionally simple and easy to debug.
+### Setting Up Development Environment
+
+```bash
+# Clone and setup
+git clone https://github.com/AnimusUNO/animus-chat.git
+cd animus-chat
+python -m venv venv
+venv\Scripts\activate  # Windows
+pip install -r requirements.txt
+pip install -r requirements-test.txt
+
+# Run tests to verify setup
+python run_tests.py
+```
+
+### Code Style
+
+- Follow PEP 8 Python style guidelines
+- Use type hints where appropriate
+- Write comprehensive docstrings
+- Maintain 100% test coverage on core modules
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes
+4. Run tests (`python run_tests.py`)
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Connection Failed**
+- Verify `LETTA_SERVER_URL` is correct
+- Check `LETTA_API_TOKEN` is valid
+- Ensure internet connection is working
+
+**Agent Not Found**
+- Use `/agents` to see available agents
+- Check agent ID is correct
+- Try using agent number instead of ID
+
+**Unicode/Emoji Issues on Windows**
+- The app includes Windows-compatible emoji handling
+- If issues persist, check console font supports Unicode
+
+**Test Failures**
+- Ensure virtual environment is activated
+- Install all test dependencies: `pip install -r requirements-test.txt`
+- Check `.env` file exists with valid configuration
+
+### Debug Mode
+
+For detailed debugging, you can modify the logging level in the source code or add debug prints.
+
+## 📄 License
+
+This project is licensed under the GNU Affero General Public License v3.0 (AGPL-3.0) for all code. Documentation and other non-code content is licensed under Creative Commons Attribution-ShareAlike 4.0 International (CC-BY-SA-4.0).
+
+- **Code License**: [AGPL-3.0](LICENSE-CODE)
+- **Documentation License**: [CC-BY-SA-4.0](LICENSE-DOCS)
+
+## 🤝 Support
+
+- **Issues**: [GitHub Issues](https://github.com/AnimusUNO/animus-chat/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/AnimusUNO/animus-chat/discussions)
+- **Documentation**: See `docs/` folder for detailed documentation
+
+## 🙏 Acknowledgments
+
+- Built for the [Letta AI](https://letta.ai) ecosystem
+- Inspired by the need for simple, developer-friendly AI chat interfaces
+- Thanks to the Python community for excellent testing tools
+
+---
+
+**Made with ❤️ for developers who prefer the command line**
