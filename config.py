@@ -48,8 +48,8 @@ class Config:
     def get_letta_client_config(self) -> dict:
         """Get configuration for Letta client"""
         return {
-            "server_url": self.letta_server_url,
-            "api_token": self.letta_api_token
+            "base_url": self.letta_server_url,
+            "token": self.letta_api_token
         }
     
     def save_to_env(self, **kwargs) -> None:
