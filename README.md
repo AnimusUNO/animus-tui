@@ -54,26 +54,21 @@ pip install -r requirements-test.txt
 ### 4. Configure Environment
 
 ```bash
-# Copy the example environment file
-copy env.example .env
-
-# Edit .env with your Letta server details
-notepad .env  # Windows
-# or
-nano .env     # Linux/macOS
+# Run the configuration script to set up your .env file
+python config.py
 ```
 
-### 5. Configure Your .env File
+The configuration script will:
+- Create a `.env` file from the template
+- Prompt you for your Letta server URL and API token
+- Set up your display name and default agent
+- Validate your configuration
 
-   ```env
-# Letta Server Configuration
-   LETTA_SERVER_URL=https://your-letta-server.com:8283
-   LETTA_API_TOKEN=your_api_token_here
-
-# User Configuration
-DISPLAY_NAME=YourName
-DEFAULT_AGENT_ID=your_preferred_agent_id
-```
+**Required Information:**
+- **Letta Server URL**: Your Letta server endpoint (e.g., `https://your-letta-server.com:8283`)
+- **API Token**: Your Letta API authentication token
+- **Display Name**: Your preferred name in chat (optional, defaults to "User")
+- **Default Agent ID**: Your preferred agent ID (optional)
 
 ## 🎯 Usage
 
@@ -238,6 +233,7 @@ python run_tests.py
 ### Common Issues
 
 **Connection Failed**
+- Run `python config.py` to reconfigure your settings
 - Verify `LETTA_SERVER_URL` is correct
 - Check `LETTA_API_TOKEN` is valid
 - Ensure internet connection is working
