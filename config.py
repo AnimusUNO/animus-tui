@@ -21,13 +21,13 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
-
 class Config:
     """Configuration settings - idempotent"""
     
     def __init__(self):
+        # Load environment variables each time we construct Config to honor
+        # test-time monkeypatching and runtime updates.
+        load_dotenv()
         self.letta_server_url = os.getenv("LETTA_SERVER_URL", "https://your-letta-server.com:8283")
         self.letta_api_token = os.getenv("LETTA_API_TOKEN", "")
         self.display_name = os.getenv("DISPLAY_NAME", "User")
@@ -47,9 +47,10 @@ class Config:
     
     def get_letta_client_config(self) -> dict:
         """Get configuration for Letta client"""
+        # Standardized keys expected by clients/tests
         return {
-            "server_url": self.letta_server_url,
-            "api_token": self.letta_api_token
+            "base_url": self.letta_server_url,
+            "token": self.letta_api_token,
         }
     
     def save_to_env(self, **kwargs) -> None:

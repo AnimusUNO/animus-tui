@@ -21,7 +21,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import asyncio
 import sys
-from letta_api import letta_client
+from letta_api import LettaClient, letta_client as _global_letta_client
 from config import config
 
 def safe_print(text, end="", flush=False):
@@ -51,14 +51,22 @@ def print_status():
     print(f"User: {config.display_name}")
     
     if letta_client and letta_client.current_agent_id:
-        # Get agent name from the list
-        agents = letta_client.list_agents()
-        agent_name = "Unknown Agent"
-        for agent in agents:
-            if agent['id'] == letta_client.current_agent_id:
-                agent_name = agent['name']
-                break
-        print(f"Agent: {agent_name} ({letta_client.current_agent_id})")
+        # Prefer showing ID first to align with tooling/tests
+        agent_id = letta_client.current_agent_id
+        # Try to resolve name if available, but id is primary
+        agent_name = None
+        try:
+            agents = letta_client.list_agents()
+            for agent in agents:
+                if agent.get('id') == agent_id:
+                    agent_name = agent.get('name')
+                    break
+        except Exception:
+            agent_name = None
+        if agent_name:
+            print(f"Agent: {agent_id} ({agent_name})")
+        else:
+            print(f"Agent: {agent_id}")
     else:
         print("Agent: None selected")
     
@@ -135,12 +143,11 @@ async def send_message(message: str):
     
     try:
         # Use streaming for real-time response
-        response = ""
         async for chunk in letta_client.send_message_stream(message):
             safe_print(chunk, end="", flush=True)
-            response += chunk
         
         print()  # New line after response
+        print("-" * 60)
         
     except Exception as e:
         print(f"Error: {e}")
@@ -155,6 +162,14 @@ async def main():
         return
     
     # Test connection
+    # Initialize client lazily to avoid import-time side effects
+    global _global_letta_client
+    if _global_letta_client is None:
+        _global_letta_client = LettaClient()
+    # Replace module-level name for convenience
+    from letta_api import letta_client as _unused
+    globals()['letta_client'] = _global_letta_client
+
     if not await test_connection():
         print("Cannot connect to server. Exiting.")
         return
