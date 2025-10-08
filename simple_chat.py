@@ -144,6 +144,7 @@ async def send_message(message: str):
             response += chunk
 
         print()  # New line after response
+        print("-" * 60)  # Separator line for readability
 
     except Exception as e:
         print(f"Error: {e}")
