@@ -1,3 +1,6 @@
+# =============================================================================
+# Python
+# =============================================================================
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -50,6 +53,10 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+.coverage
+.pytest_cache/
+test-results/
+test-reports/
 
 # Translations
 *.mo
@@ -109,6 +116,8 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.conda/
+conda-meta/
 
 # Spyder project settings
 .spyderproject
@@ -128,14 +137,46 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# IDE
+# =============================================================================
+# IDEs and Editors
+# =============================================================================
+# VSCode
 .vscode/
+*.code-workspace
+
+# IntelliJ IDEA
 .idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
 *.swp
 *.swo
 *~
+.netrwhist
 
-# OS
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Atom
+.atom/
+
+# =============================================================================
+# Operating Systems
+# =============================================================================
+# macOS
 .DS_Store
 .DS_Store?
 ._*
@@ -143,8 +184,279 @@ dmypy.json
 .Trashes
 ehthumbs.db
 Thumbs.db
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
 
-# Project specific
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# =============================================================================
+# Development Tools
+# =============================================================================
+# Docker
+.dockerignore
+Dockerfile*
+docker-compose*.yml
+.docker/
+
+# Kubernetes
+*.kubeconfig
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Ansible
+*.retry
+
+# Vagrant
+.vagrant/
+
+# =============================================================================
+# Databases
+# =============================================================================
+# SQLite
+*.sqlite
+*.sqlite3
+*.db
+
+# PostgreSQL
+*.pgsql
+
+# MySQL
+*.sql
+
+# =============================================================================
+# Logs and Temporary Files
+# =============================================================================
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage
+.grunt
+
+# Bower dependency directory
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons
+build/Release
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.test
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# parcel-bundler cache
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+public
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# =============================================================================
+# Security and Secrets
+# =============================================================================
+# API keys and secrets
+*.key
+*.pem
+*.p12
+*.pfx
+secrets.json
+credentials.json
+.secrets/
+
+# SSH keys
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# GPG keys
+*.gpg
+*.asc
+
+# =============================================================================
+# Media and Binary Files
+# =============================================================================
+# Images (uncomment if you don't want to track images)
+# *.jpg
+# *.jpeg
+# *.png
+# *.gif
+# *.bmp
+# *.tiff
+# *.ico
+# *.svg
+
+# Videos
 *.mp4
 *.avi
 *.mov
+*.wmv
+*.flv
+*.webm
+*.mkv
+
+# Audio
+*.mp3
+*.wav
+*.flac
+*.aac
+*.ogg
+*.wma
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# =============================================================================
+# Project Specific
+# =============================================================================
+# Letta Chat specific
+.env
+*.log
+*.pid
+
+# Test artifacts
+test-results/
+test-reports/
+coverage-reports/
+
+# Build outputs
+build/
+dist/
+out/
+
+# Documentation builds
+docs/_build/
+site/
+
+# =============================================================================
+# Miscellaneous
+# =============================================================================
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+
+# Lock files (uncomment if you want to ignore them)
+# package-lock.json
+# yarn.lock
+# Pipfile.lock
+
+# Editor directories and files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
