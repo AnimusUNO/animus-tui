@@ -32,7 +32,7 @@ class LettaClient:
             base_url=config.letta_server_url,
             token=config.letta_api_token
         )
-        self.current_agent_id = config.default_agent_id
+        self.current_agent_id = config.default_agent_id or ""
     
     def test_connection(self) -> bool:
         """Test connection to Letta server"""

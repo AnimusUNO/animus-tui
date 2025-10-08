@@ -22,12 +22,15 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
-load_dotenv()
+# load_dotenv()  # Moved to Config.__init__ to avoid import-time side effects
 
 class Config:
     """Configuration settings - idempotent"""
     
     def __init__(self):
+        # Load environment variables from .env file
+        load_dotenv()
+        
         self.letta_server_url = os.getenv("LETTA_SERVER_URL", "https://your-letta-server.com:8283")
         self.letta_api_token = os.getenv("LETTA_API_TOKEN", "")
         self.display_name = os.getenv("DISPLAY_NAME", "User")
