@@ -24,6 +24,9 @@ import sys
 from letta_api import letta_client
 from config import config
 
+# Expose letta_client at module level for test patching and dependency injection
+letta_client = letta_client
+
 def safe_print(text, end="", flush=False):
     """Print text with emoji support"""
     try:
@@ -33,7 +36,7 @@ def safe_print(text, end="", flush=False):
         try:
             safe_text = text.encode('utf-8', errors='replace').decode('utf-8')
             print(safe_text, end=end, flush=flush)
-        except:
+        except Exception:
             # Last resort - replace problematic characters
             safe_text = text.encode('ascii', errors='replace').decode('ascii')
             print(safe_text, end=end, flush=flush)
