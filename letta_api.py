@@ -1,0 +1,99 @@
+"""
+Minimal Letta API wrapper
+Handles connection and message sending
+"""
+import asyncio
+from typing import List, AsyncGenerator, Optional
+from letta_client import Letta as LettaSDK
+from letta_client import MessageCreate
+from config import config
+
+class LettaClient:
+    """Simple Letta API client"""
+    
+    def __init__(self):
+        # Create client with proper configuration
+        self.client = LettaSDK(
+            base_url=config.letta_server_url,
+            token=config.letta_api_token
+        )
+        self.current_agent_id = config.default_agent_id
+    
+    def test_connection(self) -> bool:
+        """Test connection to Letta server"""
+        try:
+            self.client.health.check()
+            return True
+        except Exception as e:
+            print(f"Connection failed: {e}")
+            return False
+    
+    def list_agents(self) -> List[dict]:
+        """List available agents"""
+        try:
+            agents = self.client.agents.list()
+            return [{"id": agent.id, "name": agent.name, "description": getattr(agent, 'description', '')} for agent in agents]
+        except Exception as e:
+            print(f"Failed to list agents: {e}")
+            return []
+    
+    def set_agent(self, agent_id: str) -> bool:
+        """Set the active agent"""
+        self.current_agent_id = agent_id
+        return True
+    
+    def send_message(self, content: str) -> Optional[str]:
+        """Send a message and get response (sync)"""
+        if not self.current_agent_id:
+            print("Error: No agent selected")
+            return None
+        
+        try:
+            message_data = [MessageCreate(role="user", content=content)]
+            response = self.client.agents.messages.create(
+                agent_id=self.current_agent_id,
+                messages=message_data
+            )
+            
+            # Extract content from the response messages
+            for message in response.messages:
+                if hasattr(message, 'content') and message.content:
+                    return message.content
+            return None
+        except Exception as e:
+            print(f"Failed to send message: {e}")
+            return None
+    
+    async def send_message_stream(self, content: str) -> AsyncGenerator[str, None]:
+        """Send a message and stream response (async) with token-level streaming"""
+        if not self.current_agent_id:
+            yield "Error: No agent selected"
+            return
+        
+        try:
+            message_data = [MessageCreate(role="user", content=content)]
+            response_stream = self.client.agents.messages.create_stream(
+                agent_id=self.current_agent_id,
+                messages=message_data,
+                stream_tokens=True  # Enable token-level streaming
+            )
+            
+            for chunk in response_stream:
+                # Only yield content from AssistantMessage chunks
+                if (hasattr(chunk, 'content') and 
+                    chunk.content and 
+                    hasattr(chunk, 'message_type') and 
+                    chunk.message_type == 'assistant_message'):
+                    yield chunk.content
+                    
+        except Exception as e:
+            yield f"Error: {e}"
+
+# Global client instance - only create if config is valid
+try:
+    if config.validate():
+        letta_client = LettaClient()
+    else:
+        letta_client = None
+except Exception as e:
+    letta_client = None
