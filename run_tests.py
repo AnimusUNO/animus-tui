@@ -14,13 +14,13 @@ def run_tests():
     print("           LETTA CHAT CLIENT - TEST SUITE")
     print("=" * 60)
     print()
-    
+
     # Check if we're in a virtual environment
     if not hasattr(sys, 'real_prefix') and not (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
         print("Warning: Not running in a virtual environment")
         print("Consider running: python -m venv venv && .\\venv\\Scripts\\activate")
         print()
-    
+
     # Run pytest with coverage
     cmd = [
         sys.executable, "-m", "pytest",
@@ -31,11 +31,11 @@ def run_tests():
         "--cov-report=term-missing",
         "--cov-report=html:htmlcov"
     ]
-    
+
     print("Running tests...")
     print(f"Command: {' '.join(cmd)}")
     print()
-    
+
     try:
         result = subprocess.run(cmd, check=True)
         print()
@@ -73,5 +73,5 @@ if __name__ == "__main__":
         success = install_test_deps()
     else:
         success = run_tests()
-    
+
     sys.exit(0 if success else 1)

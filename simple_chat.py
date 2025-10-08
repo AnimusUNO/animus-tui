@@ -49,19 +49,22 @@ def print_status():
     """Print current status"""
     print(f"Server: {config.letta_server_url}")
     print(f"User: {config.display_name}")
-    
+
     if letta_client and letta_client.current_agent_id:
         # Get agent name from the list
-        agents = letta_client.list_agents()
-        agent_name = "Unknown Agent"
-        for agent in agents:
-            if agent['id'] == letta_client.current_agent_id:
-                agent_name = agent['name']
-                break
-        print(f"Agent: {agent_name} ({letta_client.current_agent_id})")
+        try:
+            agents = letta_client.list_agents()
+            agent_name = "Unknown Agent"
+            for agent in agents:
+                if agent['id'] == letta_client.current_agent_id:
+                    agent_name = agent['name']
+                    break
+            print(f"Agent: {agent_name} ({letta_client.current_agent_id})")
+        except Exception:
+            print(f"Agent: {letta_client.current_agent_id}")
     else:
         print("Agent: None selected")
-    
+
     print("-" * 60)
 
 def print_help():
@@ -129,60 +132,60 @@ async def send_message(message: str):
     """Send a message to the agent"""
     if not message.strip():
         return
-    
+
     print(f"\n[You] {message}")
     print("[Assistant] ", end="", flush=True)
-    
+
     try:
         # Use streaming for real-time response
         response = ""
         async for chunk in letta_client.send_message_stream(message):
             safe_print(chunk, end="", flush=True)
             response += chunk
-        
+
         print()  # New line after response
-        
+
     except Exception as e:
         print(f"Error: {e}")
 
 async def main():
     """Main application loop"""
     print_banner()
-    
+
     # Validate configuration
     if not config.validate():
         print("Configuration validation failed. Please check your .env file.")
         return
-    
+
     # Test connection
     if not await test_connection():
         print("Cannot connect to server. Exiting.")
         return
-    
+
     # List agents
     await list_agents()
-    
+
     # Set agent if configured
     if config.default_agent_id:
         await set_agent(config.default_agent_id)
-    
+
     print_status()
     print_help()
-    
+
     # Main chat loop
     while True:
         try:
             user_input = input(f"\n[{config.display_name}] ").strip()
-            
+
             if not user_input:
                 continue
-                
+
             # Handle commands
             if user_input.startswith('/'):
                 parts = user_input[1:].split(' ', 1)
                 command = parts[0].lower()
                 arg = parts[1] if len(parts) > 1 else ""
-                
+
                 if command == 'help':
                     print_help()
                 elif command == 'status':
@@ -207,7 +210,7 @@ async def main():
             else:
                 # Send message
                 await send_message(user_input)
-                
+
         except KeyboardInterrupt:
             print("\n\nGoodbye!")
             break

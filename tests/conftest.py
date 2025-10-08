@@ -30,36 +30,36 @@ DEFAULT_AGENT_ID=agent_123
 def mock_letta_client():
     """Mock Letta client for testing"""
     client = Mock()
-    
+
     # Mock health check
     client.health = Mock()
     client.health.check.return_value = Mock(version="0.1.324", status="ok")
-    
+
     # Mock agents
     client.agents = Mock()
     mock_agent1 = Mock()
     mock_agent1.id = "agent_123"
     mock_agent1.name = "Test Agent 1"
     mock_agent1.description = "First test agent"
-    
+
     mock_agent2 = Mock()
     mock_agent2.id = "agent_456"
     mock_agent2.name = "Test Agent 2"
     mock_agent2.description = "Second test agent"
-    
+
     client.agents.list.return_value = [mock_agent1, mock_agent2]
-    
+
     # Mock messages
     client.agents.messages = Mock()
     mock_response = Mock()
     mock_response.content = "Test response from agent"
     client.agents.messages.create.return_value = mock_response
-    
+
     # Mock streaming
     mock_chunk = Mock()
     mock_chunk.content = "Streaming response chunk"
     client.agents.messages.create_stream.return_value = [mock_chunk]
-    
+
     return client
 
 @pytest.fixture
