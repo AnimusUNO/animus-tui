@@ -104,11 +104,35 @@ class LettaClient:
         except Exception as e:
             yield f"Error: {e}"
 
-# Global client instance - only create if config is valid
-try:
-    if config.validate():
-        letta_client = LettaClient()
-    else:
-        letta_client = None
-except Exception as e:
-    letta_client = None
+# Global client instance - lazy initialization
+_letta_client = None
+
+class LazyLettaClient:
+    """Lazy initialization wrapper for LettaClient"""
+    
+    def __init__(self):
+        self._client = None
+    
+    def _ensure_client(self):
+        """Ensure client is initialized"""
+        global _letta_client
+        if _letta_client is None:
+            try:
+                if config.validate():
+                    _letta_client = LettaClient()
+                else:
+                    _letta_client = None
+            except Exception as e:
+                _letta_client = None
+        self._client = _letta_client
+        return self._client
+    
+    def __getattr__(self, name):
+        """Delegate attribute access to the actual client"""
+        client = self._ensure_client()
+        if client is None:
+            raise RuntimeError("Letta client is not available - check configuration")
+        return getattr(client, name)
+
+# Create lazy client instance
+letta_client = LazyLettaClient()
