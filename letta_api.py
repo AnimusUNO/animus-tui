@@ -93,7 +93,7 @@ class LettaClient:
             logger.error(f"Failed to send message: {e}")
             return None
 
-    async def send_message_stream(self, content: str) -> AsyncGenerator[str, None]:
+    async def send_message_stream(self, content: str, show_reasoning: bool = False) -> AsyncGenerator[str, None]:
         """Send a message and stream response (async) with token-level streaming"""
         if not self.current_agent_id:
             yield "Error: No agent selected"
@@ -108,7 +108,18 @@ class LettaClient:
             )
 
             for chunk in response_stream:
-                # Only yield content from AssistantMessage chunks
+                # Handle reasoning messages if enabled
+                if show_reasoning and hasattr(chunk, 'message_type'):
+                    if chunk.message_type == 'reasoning_message':
+                        reasoning_content = getattr(chunk, 'reasoning', '')
+                        if reasoning_content:
+                            yield f"[Thinking] {reasoning_content}"
+                    elif chunk.message_type == 'hidden_reasoning_message':
+                        hidden_content = getattr(chunk, 'hidden_reasoning', '')
+                        if hidden_content:
+                            yield f"[Hidden Thinking] {hidden_content}"
+                
+                # Yield content from AssistantMessage chunks
                 if (hasattr(chunk, 'content') and
                     chunk.content and
                     hasattr(chunk, 'message_type') and

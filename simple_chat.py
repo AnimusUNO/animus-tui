@@ -50,6 +50,9 @@ def setup_logging(verbose=False, debug=False):
 
 logger = logging.getLogger(__name__)
 
+# Global state for reasoning visibility
+show_reasoning = False
+
 # Expose letta_client at module level for test patching and dependency injection
 letta_client = letta_client
 
@@ -118,8 +121,10 @@ def print_help():
     print("  /agents   - List available agents")
     print("  /agent <id> - Set agent by ID or number")
     print("  /clear    - Clear screen")
+    print("  /reasoning - Toggle reasoning/thinking display")
     print("  /quit     - Exit the application")
     print("\nNote: Use /agent 5 to select agent #5 from the list")
+    print("Note: Use --reasoning flag to enable reasoning by default")
     print()
 
 async def test_connection():
@@ -196,7 +201,7 @@ async def send_message(message: str):
     try:
         # Use streaming for real-time response
         response = ""
-        async for chunk in letta_client.send_message_stream(message):
+        async for chunk in letta_client.send_message_stream(message, show_reasoning=show_reasoning):
             safe_print(chunk, end="", flush=True)
             response += chunk
 
@@ -205,10 +210,14 @@ async def send_message(message: str):
     except Exception as e:
         print(f"Error: {e}")
 
-async def main(verbose=False, debug=False):
+async def main(verbose=False, debug=False, reasoning=False):
     """Main application loop"""
     # Setup logging first
     setup_logging(verbose=verbose, debug=debug)
+    
+    # Set global state for reasoning display
+    global show_reasoning
+    show_reasoning = reasoning
     
     print_banner()
 
@@ -261,6 +270,9 @@ async def main(verbose=False, debug=False):
                     print("\n" + "=" * 60)
                     print("Screen cleared")
                     print("=" * 60)
+                elif command == 'reasoning':
+                    show_reasoning = not show_reasoning
+                    print(f"Reasoning display: {'ON' if show_reasoning else 'OFF'}")
                 elif command == 'quit':
                     print("Goodbye!")
                     break

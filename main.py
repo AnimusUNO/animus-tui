@@ -35,11 +35,13 @@ if __name__ == "__main__":
                        help='Enable verbose logging output')
     parser.add_argument('--debug', '-d', action='store_true',
                        help='Enable debug logging output')
+    parser.add_argument('--reasoning', '-r', action='store_true',
+                       help='Show agent reasoning/thinking process')
     
     args = parser.parse_args()
     
     try:
-        asyncio.run(main(verbose=args.verbose, debug=args.debug))
+        asyncio.run(main(verbose=args.verbose, debug=args.debug, reasoning=args.reasoning))
     except KeyboardInterrupt:
         print("\nGoodbye!")
         sys.exit(0)
