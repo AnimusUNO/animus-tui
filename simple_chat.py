@@ -110,8 +110,6 @@ def print_status():
     else:
         print("Agent: None selected")
 
-    print("-" * 60)
-
 def print_help():
     """Print help commands"""
     print("\nCommands:")
@@ -188,7 +186,6 @@ async def send_message(message: str):
             response += chunk
 
         print()  # New line after response
-        print("-" * 60)  # Separator line for readability
 
     except Exception as e:
         print(f"Error: {e}")
