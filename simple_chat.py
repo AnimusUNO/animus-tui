@@ -54,14 +54,33 @@ def print_status():
     print(f"User: {config.display_name}")
 
     if letta_client and letta_client.current_agent_id:
-        # Get agent name from the list
-        agents = letta_client.list_agents()
-        agent_name = "Unknown Agent"
-        for agent in agents:
-            if agent['id'] == letta_client.current_agent_id:
-                agent_name = agent['name']
-                break
-        print(f"Agent: {agent_name} ({letta_client.current_agent_id})")
+        # Get agent name from the list with proper error handling
+        try:
+            # Check if client is available before calling methods
+            if hasattr(letta_client, 'client') and letta_client.client is None:
+                print(f"Agent: Unknown Agent ({letta_client.current_agent_id}) - Client not available")
+            else:
+                # Try to get agents list with basic error handling
+                agents = letta_client.list_agents()
+                agent_name = "Unknown Agent"
+                
+                # Validate agents list and structure
+                if agents and isinstance(agents, list):
+                    for agent in agents:
+                        # Validate agent structure
+                        if isinstance(agent, dict) and 'id' in agent and 'name' in agent:
+                            if agent['id'] == letta_client.current_agent_id:
+                                agent_name = agent['name']
+                                break
+                        else:
+                            print(f"Warning: Invalid agent structure: {agent}")
+                            continue
+                
+                print(f"Agent: {agent_name} ({letta_client.current_agent_id})")
+            
+        except Exception as e:
+            print(f"Error retrieving agent info: {e}")
+            print(f"Agent: Unknown Agent ({letta_client.current_agent_id})")
     else:
         print("Agent: None selected")
 

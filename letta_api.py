@@ -131,6 +131,15 @@ class LazyLettaClient:
         """Delegate attribute access to the actual client"""
         client = self._ensure_client()
         if client is None:
+            # Return None for common attributes when client is not available
+            if name in ['current_agent_id', 'client']:
+                return None
+            # For method calls, return a function that handles the unavailable state
+            if callable(getattr(LettaClient, name, None)):
+                def unavailable_method(*args, **kwargs):
+                    print(f"Letta client is not available - check configuration")
+                    return [] if name == 'list_agents' else None
+                return unavailable_method
             raise RuntimeError("Letta client is not available - check configuration")
         return getattr(client, name)
 
