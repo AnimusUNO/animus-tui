@@ -20,9 +20,21 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import asyncio
+import logging
 import sys
 from letta_api import letta_client
 from config import config
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('letta_chat.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger(__name__)
 
 # Expose letta_client at module level for test patching and dependency injection
 letta_client = letta_client
@@ -73,13 +85,13 @@ def print_status():
                                 agent_name = agent['name']
                                 break
                         else:
-                            print(f"Warning: Invalid agent structure: {agent}")
+                            logger.warning(f"Invalid agent structure: {agent}")
                             continue
                 
                 print(f"Agent: {agent_name} ({letta_client.current_agent_id})")
             
         except Exception as e:
-            print(f"Error retrieving agent info: {e}")
+            logger.error(f"Error retrieving agent info: {e}")
             print(f"Agent: Unknown Agent ({letta_client.current_agent_id})")
     else:
         print("Agent: None selected")

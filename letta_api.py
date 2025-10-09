@@ -18,10 +18,14 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import asyncio
+import logging
 from typing import List, AsyncGenerator, Optional
 from letta_client import Letta as LettaSDK
 from letta_client import MessageCreate
 from config import config
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 class LettaClient:
     """Simple Letta API client"""
@@ -40,7 +44,7 @@ class LettaClient:
             self.client.health.check()
             return True
         except Exception as e:
-            print(f"Connection failed: {e}")
+            logger.error(f"Connection failed: {e}")
             return False
 
     def list_agents(self) -> List[dict]:
@@ -49,7 +53,7 @@ class LettaClient:
             agents = self.client.agents.list()
             return [{"id": agent.id, "name": agent.name, "description": getattr(agent, 'description', '')} for agent in agents]
         except Exception as e:
-            print(f"Failed to list agents: {e}")
+            logger.error(f"Failed to list agents: {e}")
             return []
 
     def set_agent(self, agent_id: str) -> bool:
@@ -60,7 +64,7 @@ class LettaClient:
     def send_message(self, content: str) -> Optional[str]:
         """Send a message and get response (sync)"""
         if not self.current_agent_id:
-            print("Error: No agent selected")
+            logger.warning("No agent selected")
             return None
 
         try:
@@ -76,7 +80,7 @@ class LettaClient:
                     return message.content
             return None
         except Exception as e:
-            print(f"Failed to send message: {e}")
+            logger.error(f"Failed to send message: {e}")
             return None
 
     async def send_message_stream(self, content: str) -> AsyncGenerator[str, None]:
@@ -137,7 +141,7 @@ class LazyLettaClient:
             # For method calls, return a function that handles the unavailable state
             if callable(getattr(LettaClient, name, None)):
                 def unavailable_method(*args, **kwargs):
-                    print(f"Letta client is not available - check configuration")
+                    logger.error("Letta client is not available - check configuration")
                     return [] if name == 'list_agents' else None
                 return unavailable_method
             raise RuntimeError("Letta client is not available - check configuration")

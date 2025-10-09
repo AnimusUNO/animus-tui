@@ -18,8 +18,12 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import os
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 # Load environment variables from .env file
 # load_dotenv()  # Moved to Config.__init__ to avoid import-time side effects
@@ -39,11 +43,11 @@ class Config:
     def validate(self) -> bool:
         """Validate required configuration"""
         if not self.letta_api_token:
-            print("Error: LETTA_API_TOKEN is required")
+            logger.error("LETTA_API_TOKEN is required")
             return False
 
         if not self.letta_server_url or self.letta_server_url == "https://your-letta-server.com:8283":
-            print("Error: LETTA_SERVER_URL must be set to your actual server")
+            logger.error("LETTA_SERVER_URL must be set to your actual server")
             return False
 
         return True
