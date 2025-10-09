@@ -25,19 +25,30 @@ import sys
 from letta_api import letta_client
 from config import config
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('letta_chat.log'),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-logger = logging.getLogger(__name__)
+# Configure logging conditionally
+def setup_logging(verbose=False, debug=False):
+    """Setup logging based on command line flags"""
+    if debug:
+        level = logging.DEBUG
+    elif verbose:
+        level = logging.INFO
+    else:
+        level = logging.WARNING  # Only show warnings and errors by default
+    
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler('letta_chat.log'),
+            logging.StreamHandler(sys.stdout) if verbose or debug else logging.NullHandler()
+        ]
+    )
+    
+    # Suppress verbose HTTP request logging unless debug mode
+    if not debug:
+        logging.getLogger('httpx').setLevel(logging.WARNING)
 
-# Suppress verbose HTTP request logging from httpx
-logging.getLogger('httpx').setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
 
 # Expose letta_client at module level for test patching and dependency injection
 letta_client = letta_client
@@ -182,8 +193,11 @@ async def send_message(message: str):
     except Exception as e:
         print(f"Error: {e}")
 
-async def main():
+async def main(verbose=False, debug=False):
     """Main application loop"""
+    # Setup logging first
+    setup_logging(verbose=verbose, debug=debug)
+    
     print_banner()
 
     # Validate configuration

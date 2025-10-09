@@ -19,6 +19,7 @@ GNU Affero General Public License for more details.
 You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+import argparse
 import asyncio
 import sys
 from pathlib import Path
@@ -29,8 +30,16 @@ sys.path.insert(0, str(Path(__file__).parent))
 from simple_chat import main
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Letta Chat Client')
+    parser.add_argument('--verbose', '-v', action='store_true', 
+                       help='Enable verbose logging output')
+    parser.add_argument('--debug', '-d', action='store_true',
+                       help='Enable debug logging output')
+    
+    args = parser.parse_args()
+    
     try:
-        asyncio.run(main())
+        asyncio.run(main(verbose=args.verbose, debug=args.debug))
     except KeyboardInterrupt:
         print("\nGoodbye!")
         sys.exit(0)
