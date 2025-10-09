@@ -164,7 +164,6 @@ async def send_message(message: str):
     if not message.strip():
         return
 
-    print(f"\n[You] {message}")
     print("[Assistant] ", end="", flush=True)
 
     try:
