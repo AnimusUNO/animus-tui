@@ -77,7 +77,15 @@ class Config:
             f.write("# Letta Chat Client Configuration\n")
             f.write("# Generated automatically - safe to edit\n\n")
             for key, value in existing_vars.items():
-                f.write(f"{key}={value}\n")
+                # Quote values that contain spaces, #, or =
+                if any(char in str(value) for char in [' ', '#', '=']):
+                    f.write(f'{key}="{value}"\n')
+                else:
+                    f.write(f"{key}={value}\n")
+        
+        # Set secure permissions on POSIX systems
+        if hasattr(os, 'chmod'):
+            os.chmod(env_path, 0o600)  # Read/write for owner only
 
 # Global config instance
 config = Config()

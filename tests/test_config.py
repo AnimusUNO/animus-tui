@@ -11,7 +11,8 @@ from config import Config
 class TestConfig:
     def test_initialization_defaults(self):
         """Test config initialization with defaults"""
-        with patch.dict(os.environ, {}, clear=True):
+        with patch.dict(os.environ, {}, clear=True), \
+             patch('config.load_dotenv'):
             config = Config()
             assert config.letta_server_url == "https://your-letta-server.com:8283"
             assert config.letta_api_token == ""
@@ -33,19 +34,22 @@ class TestConfig:
 
     def test_validate_missing_token(self):
         """Test validation with missing API token"""
-        with patch.dict(os.environ, {"LETTA_SERVER_URL": "https://test.com"}, clear=True):
+        with patch.dict(os.environ, {"LETTA_SERVER_URL": "https://test.com"}, clear=True), \
+             patch('config.load_dotenv'):
             config = Config()
             assert config.validate() is False
 
     def test_validate_missing_server_url(self):
         """Test validation with missing server URL"""
-        with patch.dict(os.environ, {"LETTA_API_TOKEN": "token"}, clear=True):
+        with patch.dict(os.environ, {"LETTA_API_TOKEN": "token"}, clear=True), \
+             patch('config.load_dotenv'):
             config = Config()
             assert config.validate() is False
 
     def test_validate_default_server_url(self):
         """Test validation with default server URL"""
-        with patch.dict(os.environ, {"LETTA_API_TOKEN": "token"}, clear=True):
+        with patch.dict(os.environ, {"LETTA_API_TOKEN": "token"}, clear=True), \
+             patch('config.load_dotenv'):
             config = Config()
             assert config.validate() is False
 
