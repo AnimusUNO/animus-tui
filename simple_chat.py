@@ -176,7 +176,22 @@ async def send_message(message: str):
     if not message.strip():
         return
 
-    print("[Assistant] ", end="", flush=True)
+    # Get the current agent name for display
+    agent_name = "Assistant"  # Default fallback
+    if letta_client and letta_client.current_agent_id:
+        try:
+            agents = letta_client.list_agents()
+            if agents and isinstance(agents, list):
+                for agent in agents:
+                    if isinstance(agent, dict) and 'id' in agent and 'name' in agent:
+                        if agent['id'] == letta_client.current_agent_id:
+                            agent_name = agent['name']
+                            break
+        except Exception:
+            # If we can't get the agent name, fall back to "Assistant"
+            pass
+    
+    print(f"[{agent_name}] ", end="", flush=True)
 
     try:
         # Use streaming for real-time response
