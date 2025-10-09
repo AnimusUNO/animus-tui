@@ -44,7 +44,12 @@ class LettaClient:
             self.client.health.check()
             return True
         except Exception as e:
-            logger.error(f"Connection failed: {e}")
+            # Handle SSL certificate errors gracefully
+            if "CERTIFICATE_VERIFY_FAILED" in str(e) or "SSL" in str(e):
+                logger.warning(f"SSL certificate verification failed: {e}")
+                logger.info("Consider using a valid server URL or disabling SSL verification for development")
+            else:
+                logger.error(f"Connection failed: {e}")
             return False
 
     def list_agents(self) -> List[dict]:
@@ -53,7 +58,12 @@ class LettaClient:
             agents = self.client.agents.list()
             return [{"id": agent.id, "name": agent.name, "description": getattr(agent, 'description', '')} for agent in agents]
         except Exception as e:
-            logger.error(f"Failed to list agents: {e}")
+            # Handle SSL certificate errors gracefully
+            if "CERTIFICATE_VERIFY_FAILED" in str(e) or "SSL" in str(e):
+                logger.warning(f"SSL certificate verification failed while listing agents: {e}")
+                logger.info("Consider using a valid server URL or disabling SSL verification for development")
+            else:
+                logger.error(f"Failed to list agents: {e}")
             return []
 
     def set_agent(self, agent_id: str) -> bool:
