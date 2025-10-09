@@ -36,6 +36,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Suppress verbose HTTP request logging from httpx
+logging.getLogger('httpx').setLevel(logging.WARNING)
+
 # Expose letta_client at module level for test patching and dependency injection
 letta_client = letta_client
 
