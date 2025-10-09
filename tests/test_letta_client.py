@@ -10,10 +10,16 @@ class TestLettaClient:
     @pytest.fixture
     def client(self, mock_env_vars):
         """Create LettaClient instance for testing"""
-        with patch('letta_api.config') as mock_config:
+        with patch('letta_api.config') as mock_config, \
+             patch('letta_api.LettaSDK') as mock_sdk_class:
             mock_config.default_agent_id = "agent_123"
             mock_config.letta_server_url = "https://test-server.com:8283"
             mock_config.letta_api_token = "test_token_123"
+            
+            # Create a mock SDK instance
+            mock_sdk = Mock()
+            mock_sdk_class.return_value = mock_sdk
+            
             return LettaClient()
 
     def test_initialization(self, client, mock_env_vars):
@@ -69,7 +75,9 @@ class TestLettaClient:
         """Test successful message sending"""
         client.current_agent_id = "agent_123"
         mock_response = Mock()
-        mock_response.content = "Test response"
+        mock_message = Mock()
+        mock_message.content = "Test response"
+        mock_response.messages = [mock_message]
         client.client.agents.messages.create.return_value = mock_response
 
         response = client.send_message("Hello")
