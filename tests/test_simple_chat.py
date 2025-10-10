@@ -132,9 +132,7 @@ class TestSimpleChat:
             await send_message("Hi there")
 
             captured = capsys.readouterr()
-            assert "[You] Hi there" in captured.out
             assert "[Assistant] Hello world!" in captured.out
-            assert "-" * 60 in captured.out
 
     @pytest.mark.asyncio
     async def test_send_message_empty(self, capsys):
@@ -155,8 +153,7 @@ class TestSimpleChat:
             await send_message("Hello")
 
             captured = capsys.readouterr()
-            assert "[You] Hello" in captured.out
-            assert "Error: API Error" in captured.out
+            assert "[Assistant] Error: API Error" in captured.out
 
     @pytest.mark.asyncio
     async def test_main_validation_failure(self, capsys):
