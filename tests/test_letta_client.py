@@ -71,6 +71,22 @@ class TestLettaClient:
         assert result is True
         assert client.current_agent_id == "agent_456"
 
+    def test_send_message_success_direct_content(self, client):
+        """Test successful message sending with direct response.content"""
+        client.current_agent_id = "agent_123"
+        mock_response = Mock()
+        mock_response.content = "Direct response"
+        mock_response.messages = []  # Empty messages array
+        client.client.agents.messages.create.return_value = mock_response
+
+        response = client.send_message("Hello")
+
+        assert response == "Direct response"
+        client.client.agents.messages.create.assert_called_once_with(
+            agent_id="agent_123",
+            messages=[MessageCreate(role="user", content="Hello")]
+        )
+
     def test_send_message_success(self, client):
         """Test successful message sending"""
         client.current_agent_id = "agent_123"
@@ -78,6 +94,8 @@ class TestLettaClient:
         mock_message = Mock()
         mock_message.content = "Test response"
         mock_response.messages = [mock_message]
+        # Ensure response.content is None so it falls back to messages
+        mock_response.content = None
         client.client.agents.messages.create.return_value = mock_response
 
         response = client.send_message("Hello")
@@ -104,6 +122,43 @@ class TestLettaClient:
         assert response is None
 
     @pytest.mark.asyncio
+    def test_send_message_stream_content_only(self, client):
+        """Test streaming with content-only chunks (no message_type dependency)"""
+        client.current_agent_id = "agent_123"
+
+        # Mock streaming response with chunks that have content but no message_type
+        mock_chunk1 = Mock()
+        mock_chunk1.content = "Hello "
+        # No message_type attribute - this should still work with our fix
+        
+        mock_chunk2 = Mock()
+        mock_chunk2.content = "world!"
+        # No message_type attribute - this should still work with our fix
+
+        client.client.agents.messages.create_stream.return_value = [mock_chunk1, mock_chunk2]
+
+        # Test the streaming logic synchronously by calling the generator
+        stream_gen = client.send_message_stream("Hello")
+        
+        # Since it's async, we'll test the logic by checking the mock calls
+        client.client.agents.messages.create_stream.assert_not_called()
+        
+        # The method should be called when we iterate
+        import asyncio
+        async def test_stream():
+            chunks = []
+            async for chunk in client.send_message_stream("Hello"):
+                chunks.append(chunk)
+            return chunks
+        
+        chunks = asyncio.run(test_stream())
+        assert chunks == ["Hello ", "world!"]
+        client.client.agents.messages.create_stream.assert_called_once_with(
+            agent_id="agent_123",
+            messages=[MessageCreate(role="user", content="Hello")],
+            stream_tokens=True
+        )
+
     async def test_send_message_stream_success(self, client):
         """Test successful message streaming"""
         client.current_agent_id = "agent_123"

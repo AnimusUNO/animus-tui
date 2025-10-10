@@ -84,10 +84,15 @@ class LettaClient:
                 messages=message_data
             )
 
-            # Extract content from the response messages
-            for message in response.messages:
-                if hasattr(message, 'content') and message.content:
-                    return message.content
+            # Handle direct .content
+            if hasattr(response, 'content') and response.content:
+                return response.content
+
+            # Handle .messages[].content
+            if hasattr(response, 'messages'):
+                for message in response.messages:
+                    if hasattr(message, 'content') and message.content:
+                        return message.content
             return None
         except Exception as e:
             logger.error(f"Failed to send message: {e}")
@@ -119,11 +124,8 @@ class LettaClient:
                         if hidden_content:
                             yield f"[Hidden Thinking] {hidden_content}"
                 
-                # Yield content from AssistantMessage chunks
-                if (hasattr(chunk, 'content') and
-                    chunk.content and
-                    hasattr(chunk, 'message_type') and
-                    chunk.message_type == 'assistant_message'):
+                # Yield content when present, regardless of message_type
+                if hasattr(chunk, 'content') and chunk.content:
                     yield chunk.content
 
         except Exception as e:
