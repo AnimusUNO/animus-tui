@@ -123,3 +123,134 @@ DISPLAY_NAME=OldUser
                 content = env_path.read_text()
                 assert content.count("LETTA_SERVER_URL=https://test.com") == 1
 
+class TestConfigInteractiveFunctions:
+    """Test interactive configuration functions"""
+    
+    def test_get_user_input_with_default(self):
+        """Test get_user_input with default value"""
+        from config import get_user_input
+        from unittest.mock import patch
+        
+        with patch('builtins.input', return_value=''):
+            result = get_user_input("Enter value", default="default_value")
+            assert result == "default_value"
+    
+    def test_get_user_input_with_user_input(self):
+        """Test get_user_input with user input"""
+        from config import get_user_input
+        from unittest.mock import patch
+        
+        with patch('builtins.input', return_value='user_value'):
+            result = get_user_input("Enter value", default="default_value")
+            assert result == "user_value"
+    
+    def test_get_user_input_required_empty(self):
+        """Test get_user_input with required field and empty input"""
+        from config import get_user_input
+        from unittest.mock import patch
+        
+        with patch('builtins.input', side_effect=['', 'valid_value']):
+            result = get_user_input("Enter value", required=True)
+            assert result == "valid_value"
+    
+    def test_get_user_input_not_required(self):
+        """Test get_user_input with not required field"""
+        from config import get_user_input
+        from unittest.mock import patch
+        
+        with patch('builtins.input', return_value=''):
+            result = get_user_input("Enter value", required=False)
+            assert result == ""
+    
+    def test_test_letta_connection_success(self):
+        """Test successful Letta connection"""
+        from config import test_letta_connection
+        from unittest.mock import patch, Mock
+        
+        mock_client = Mock()
+        mock_client.health.check.return_value = None
+        
+        with patch('letta_client.Letta', return_value=mock_client):
+            success, message = test_letta_connection("https://test.com", "token")
+            assert success is True
+            assert message == "Connection successful"
+    
+    def test_test_letta_connection_failure(self):
+        """Test failed Letta connection"""
+        from config import test_letta_connection
+        from unittest.mock import patch, Mock
+        
+        mock_client = Mock()
+        mock_client.health.check.side_effect = Exception("Connection failed")
+        
+        with patch('letta_client.Letta', return_value=mock_client):
+            success, message = test_letta_connection("https://test.com", "token")
+            assert success is False
+            assert message == "Connection failed"
+    
+    def test_get_available_agents_success(self):
+        """Test getting available agents successfully"""
+        from config import get_available_agents
+        from unittest.mock import patch, Mock
+        
+        mock_client = Mock()
+        mock_agent1 = Mock()
+        mock_agent1.id = "agent1"
+        mock_agent1.name = "Agent 1"
+        mock_agent1.description = "Test agent 1"
+        
+        mock_agent2 = Mock()
+        mock_agent2.id = "agent2"
+        mock_agent2.name = "Agent 2"
+        # No description attribute - use getattr to return empty string
+        mock_agent2.description = ""
+        
+        mock_client.agents.list.return_value = [mock_agent1, mock_agent2]
+        
+        with patch('letta_client.Letta', return_value=mock_client):
+            agents = get_available_agents("https://test.com", "token")
+            assert len(agents) == 2
+            assert agents[0] == {"id": "agent1", "name": "Agent 1", "description": "Test agent 1"}
+            assert agents[1] == {"id": "agent2", "name": "Agent 2", "description": ""}
+    
+    def test_get_available_agents_failure(self):
+        """Test getting available agents with error"""
+        from config import get_available_agents
+        from unittest.mock import patch, Mock
+        
+        mock_client = Mock()
+        mock_client.agents.list.side_effect = Exception("API Error")
+        
+        with patch('letta_client.Letta', return_value=mock_client):
+            agents = get_available_agents("https://test.com", "token")
+            assert agents == []
+    
+    def test_interactive_setup_cancelled(self):
+        """Test interactive setup when user cancels"""
+        from config import interactive_setup
+        from unittest.mock import patch
+        
+        with patch('config.get_user_input', side_effect=['https://test.com', 'token']), \
+             patch('config.test_letta_connection', return_value=(False, "Connection failed")), \
+             patch('builtins.input', return_value='n'):  # User chooses not to retry
+            
+            result = interactive_setup()
+            assert result is False
+    
+    def test_interactive_setup_success(self):
+        """Test successful interactive setup"""
+        from config import interactive_setup
+        from unittest.mock import patch
+        
+        with patch('config.get_user_input', side_effect=[
+            'https://test.com',  # server URL
+            'token',            # API token
+            'TestUser'          # display name
+        ]), \
+        patch('config.test_letta_connection', return_value=(True, "Success")), \
+        patch('config.get_available_agents', return_value=[]), \
+        patch('config.Config.save_to_env'):
+            
+            result = interactive_setup()
+            assert result is True
+
