@@ -202,8 +202,10 @@ async def send_message(message: str):
         # Use streaming for real-time response
         response = ""
         async for chunk in letta_client.send_message_stream(message, show_reasoning=show_reasoning):
-            safe_print(chunk, end="", flush=True)
-            response += chunk
+            # Process chunk to handle literal newlines
+            processed_chunk = chunk.replace('\\n', '\n')
+            safe_print(processed_chunk, end="", flush=True)
+            response += processed_chunk
 
         print()  # New line after response
 

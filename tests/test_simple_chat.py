@@ -665,3 +665,95 @@ class TestSimpleChat:
             assert "LETTA SIMPLE CHAT CLIENT" in captured.out
             assert "Connected successfully!" in captured.out
             assert "Set agent: agent_123" in captured.out
+
+
+class TestLiteralNewlineHandling:
+    """Test cases for handling literal \n characters in chat responses"""
+    
+    @pytest.mark.asyncio
+    async def test_send_message_literal_newlines(self, capsys):
+        """Test send_message handles literal newlines in streaming"""
+        with patch('simple_chat.letta_client') as mock_client:
+            async def mock_stream():
+                yield "Hello\\nWorld\\nTest"
+            
+            mock_client.send_message_stream.return_value = mock_stream()
+            await send_message("Test message")
+            
+            captured = capsys.readouterr()
+            assert "Hello\nWorld\nTest" in captured.out
+    
+    @pytest.mark.asyncio
+    async def test_send_message_multiple_chunks_with_newlines(self, capsys):
+        """Test send_message handles multiple chunks with literal newlines"""
+        with patch('simple_chat.letta_client') as mock_client:
+            async def mock_stream():
+                yield "First\\nLine"
+                yield "Second\\nLine"
+                yield "Third\\nLine"
+            
+            mock_client.send_message_stream.return_value = mock_stream()
+            await send_message("Test message")
+            
+            captured = capsys.readouterr()
+            assert "First\nLine" in captured.out
+            assert "Second\nLine" in captured.out
+            assert "Third\nLine" in captured.out
+    
+    @pytest.mark.asyncio
+    async def test_send_message_mixed_chunk_types(self, capsys):
+        """Test send_message handles mixed chunk types with literal newlines"""
+        with patch('simple_chat.letta_client') as mock_client:
+            async def mock_stream():
+                yield "Normal text"
+                yield "\\nWith newlines\\n"
+                yield "More text"
+            
+            mock_client.send_message_stream.return_value = mock_stream()
+            await send_message("Test message")
+            
+            captured = capsys.readouterr()
+            assert "Normal text" in captured.out
+            assert "\nWith newlines\n" in captured.out
+            assert "More text" in captured.out
+    
+    @pytest.mark.asyncio
+    async def test_send_message_reasoning_mode_newlines(self, capsys):
+        """Test send_message handles literal newlines in reasoning mode"""
+        with patch('simple_chat.letta_client') as mock_client:
+            async def mock_stream():
+                yield "[Thinking] Process\\nStep by step\\n"
+                yield "Final response\\nWith formatting"
+            
+            mock_client.send_message_stream.return_value = mock_stream()
+            await send_message("Test message")
+            
+            captured = capsys.readouterr()
+            assert "[Thinking] Process\nStep by step\n" in captured.out
+            assert "Final response\nWith formatting" in captured.out
+    
+    @pytest.mark.asyncio
+    async def test_send_message_no_regression_normal_text(self, capsys):
+        """Test send_message doesn't break normal text without literal newlines"""
+        with patch('simple_chat.letta_client') as mock_client:
+            async def mock_stream():
+                yield "Normal text without newlines"
+            
+            mock_client.send_message_stream.return_value = mock_stream()
+            await send_message("Test message")
+            
+            captured = capsys.readouterr()
+            assert "Normal text without newlines" in captured.out
+    
+    @pytest.mark.asyncio
+    async def test_send_message_no_regression_actual_newlines(self, capsys):
+        """Test send_message doesn't break actual newlines"""
+        with patch('simple_chat.letta_client') as mock_client:
+            async def mock_stream():
+                yield "Line1\nLine2"
+            
+            mock_client.send_message_stream.return_value = mock_stream()
+            await send_message("Test message")
+            
+            captured = capsys.readouterr()
+            assert "Line1\nLine2" in captured.out
