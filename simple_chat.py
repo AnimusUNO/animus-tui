@@ -219,9 +219,28 @@ async def send_message(message: str):
     try:
         # Use streaming for real-time response
         response = ""
+        reasoning_buffer = ""
+        
         async for chunk in letta_client.send_message_stream(message, show_reasoning=show_reasoning):
-            safe_print(chunk, end="", flush=True)
-            response += chunk
+            if chunk.startswith("__REASONING__:"):
+                # This is reasoning content - buffer it
+                reasoning_content = chunk[14:]  # Remove "__REASONING__:" prefix
+                reasoning_buffer += reasoning_content
+            else:
+                # This is regular content
+                # If we have buffered reasoning, display it first
+                if reasoning_buffer:
+                    print(f"[Thinking] {reasoning_buffer}")
+                    response += f"[Thinking] {reasoning_buffer}"
+                    reasoning_buffer = ""
+                
+                safe_print(chunk, end="", flush=True)
+                response += chunk
+        
+        # Handle any remaining reasoning buffer
+        if reasoning_buffer:
+            print(f"[Thinking] {reasoning_buffer}")
+            response += f"[Thinking] {reasoning_buffer}"
 
         print()  # New line after response
 

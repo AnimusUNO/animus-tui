@@ -251,7 +251,7 @@ class TestLettaClient:
         async for chunk in client.send_message_stream("Hello", show_reasoning=True):
             chunks.append(chunk)
 
-        assert "[Thinking] I need to think about this" in chunks
+        assert "__REASONING__:I need to think about this" in chunks
         assert "Here's my response" in chunks
 
     @pytest.mark.asyncio

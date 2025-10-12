@@ -118,7 +118,8 @@ class LettaClient:
                     if chunk.message_type == 'reasoning_message':
                         reasoning_content = getattr(chunk, 'reasoning', '')
                         if reasoning_content:
-                            yield f"[Thinking] {reasoning_content}"
+                            # Yield reasoning content with special marker for display layer
+                            yield f"__REASONING__:{reasoning_content}"
                     elif chunk.message_type == 'hidden_reasoning_message':
                         hidden_content = getattr(chunk, 'hidden_reasoning', '')
                         if hidden_content:
