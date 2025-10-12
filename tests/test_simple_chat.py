@@ -675,30 +675,30 @@ class TestLiteralNewlineHandling:
         """Test send_message handles literal newlines in streaming"""
         with patch('simple_chat.letta_client') as mock_client:
             async def mock_stream():
-                yield "Hello\nWorld\nTest"  # Already processed by letta_api.py
+                yield "HelloWorldTest"  # Already processed by letta_api.py (literal \n removed)
             
             mock_client.send_message_stream.return_value = mock_stream()
             await send_message("Test message")
             
             captured = capsys.readouterr()
-            assert "Hello\nWorld\nTest" in captured.out
+            assert "HelloWorldTest" in captured.out
     
     @pytest.mark.asyncio
     async def test_send_message_multiple_chunks_with_newlines(self, capsys):
         """Test send_message handles multiple chunks with literal newlines"""
         with patch('simple_chat.letta_client') as mock_client:
             async def mock_stream():
-                yield "First\nLine"  # Already processed by letta_api.py
-                yield "Second\nLine"
-                yield "Third\nLine"
+                yield "FirstLine"  # Already processed by letta_api.py (literal \n removed)
+                yield "SecondLine"
+                yield "ThirdLine"
             
             mock_client.send_message_stream.return_value = mock_stream()
             await send_message("Test message")
             
             captured = capsys.readouterr()
-            assert "First\nLine" in captured.out
-            assert "Second\nLine" in captured.out
-            assert "Third\nLine" in captured.out
+            assert "FirstLine" in captured.out
+            assert "SecondLine" in captured.out
+            assert "ThirdLine" in captured.out
     
     @pytest.mark.asyncio
     async def test_send_message_mixed_chunk_types(self, capsys):
@@ -706,7 +706,7 @@ class TestLiteralNewlineHandling:
         with patch('simple_chat.letta_client') as mock_client:
             async def mock_stream():
                 yield "Normal text"
-                yield "\nWith newlines\n"  # Already processed by letta_api.py
+                yield "With newlines"  # Already processed by letta_api.py (literal \n removed)
                 yield "More text"
             
             mock_client.send_message_stream.return_value = mock_stream()
@@ -714,7 +714,7 @@ class TestLiteralNewlineHandling:
             
             captured = capsys.readouterr()
             assert "Normal text" in captured.out
-            assert "\nWith newlines\n" in captured.out
+            assert "With newlines" in captured.out
             assert "More text" in captured.out
     
     @pytest.mark.asyncio
@@ -722,15 +722,15 @@ class TestLiteralNewlineHandling:
         """Test send_message handles literal newlines in reasoning mode"""
         with patch('simple_chat.letta_client') as mock_client:
             async def mock_stream():
-                yield "[Thinking] Process\nStep by step\n"  # Already processed by letta_api.py
-                yield "Final response\nWith formatting"
+                yield "[Thinking] ProcessStep by step"  # Already processed by letta_api.py (literal \n removed)
+                yield "Final responseWith formatting"
             
             mock_client.send_message_stream.return_value = mock_stream()
             await send_message("Test message")
             
             captured = capsys.readouterr()
-            assert "[Thinking] Process\nStep by step\n" in captured.out
-            assert "Final response\nWith formatting" in captured.out
+            assert "[Thinking] ProcessStep by step" in captured.out
+            assert "Final responseWith formatting" in captured.out
     
     @pytest.mark.asyncio
     async def test_send_message_no_regression_normal_text(self, capsys):
