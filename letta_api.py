@@ -127,8 +127,8 @@ class LettaClient:
                 
                 # Yield content when present, regardless of message_type
                 if hasattr(chunk, 'content') and chunk.content:
-                    # Process literal newlines in content - remove literal \n characters
-                    processed_content = chunk.content.replace('\\n', '')
+                    # Process literal newlines in content - convert \n to actual newlines
+                    processed_content = chunk.content.replace('\\n', '\n')
                     yield processed_content
 
         except Exception as e:
