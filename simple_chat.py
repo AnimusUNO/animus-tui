@@ -70,6 +70,24 @@ def safe_print(text, end="", flush=False):
             safe_text = text.encode('ascii', errors='replace').decode('ascii')
             print(safe_text, end=end, flush=flush)
 
+def clear_screen():
+    """Clear the terminal screen - works on Windows, Unix/Linux, and Mac"""
+    import os
+    import sys
+    
+    try:
+        if os.name == 'nt':  # Windows
+            os.system('cls')
+        else:  # Unix/Linux/Mac
+            os.system('clear')
+    except Exception:
+        # Fallback - use ANSI escape sequence for terminals that support it
+        try:
+            print('\033[2J\033[H', end='', flush=True)
+        except Exception:
+            # Last resort - print enough newlines to clear most screens
+            print('\n' * 50)
+
 def print_banner():
     """Print a simple banner"""
     print("=" * 60)
@@ -267,9 +285,7 @@ async def main(verbose=False, debug=False, reasoning=False):
                     else:
                         print("Usage: /agent <agent_id>")
                 elif command == 'clear':
-                    print("\n" + "=" * 60)
-                    print("Screen cleared")
-                    print("=" * 60)
+                    clear_screen()
                 elif command == 'reasoning':
                     show_reasoning = not show_reasoning
                     print(f"Reasoning display: {'ON' if show_reasoning else 'OFF'}")
