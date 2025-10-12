@@ -675,7 +675,7 @@ class TestLiteralNewlineHandling:
         """Test send_message handles literal newlines in streaming"""
         with patch('simple_chat.letta_client') as mock_client:
             async def mock_stream():
-                yield "Hello\\nWorld\\nTest"
+                yield "Hello\nWorld\nTest"  # Already processed by letta_api.py
             
             mock_client.send_message_stream.return_value = mock_stream()
             await send_message("Test message")
@@ -688,9 +688,9 @@ class TestLiteralNewlineHandling:
         """Test send_message handles multiple chunks with literal newlines"""
         with patch('simple_chat.letta_client') as mock_client:
             async def mock_stream():
-                yield "First\\nLine"
-                yield "Second\\nLine"
-                yield "Third\\nLine"
+                yield "First\nLine"  # Already processed by letta_api.py
+                yield "Second\nLine"
+                yield "Third\nLine"
             
             mock_client.send_message_stream.return_value = mock_stream()
             await send_message("Test message")
@@ -706,7 +706,7 @@ class TestLiteralNewlineHandling:
         with patch('simple_chat.letta_client') as mock_client:
             async def mock_stream():
                 yield "Normal text"
-                yield "\\nWith newlines\\n"
+                yield "\nWith newlines\n"  # Already processed by letta_api.py
                 yield "More text"
             
             mock_client.send_message_stream.return_value = mock_stream()
@@ -722,8 +722,8 @@ class TestLiteralNewlineHandling:
         """Test send_message handles literal newlines in reasoning mode"""
         with patch('simple_chat.letta_client') as mock_client:
             async def mock_stream():
-                yield "[Thinking] Process\\nStep by step\\n"
-                yield "Final response\\nWith formatting"
+                yield "[Thinking] Process\nStep by step\n"  # Already processed by letta_api.py
+                yield "Final response\nWith formatting"
             
             mock_client.send_message_stream.return_value = mock_stream()
             await send_message("Test message")
