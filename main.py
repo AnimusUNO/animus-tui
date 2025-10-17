@@ -48,8 +48,8 @@ if __name__ == "__main__":
             # Use original text interface when requested
             asyncio.run(main(verbose=args.verbose, debug=args.debug, reasoning=args.reasoning))
         else:
-            # Use enhanced TUI by default
-            run_tui()
+            # Use enhanced TUI by default - pass reasoning flag
+            run_tui(reasoning=args.reasoning)
     except KeyboardInterrupt:
         print("\nGoodbye!")
         sys.exit(0)

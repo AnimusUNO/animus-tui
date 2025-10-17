@@ -34,6 +34,7 @@ class ChatTurn:
     role: str
     content: str
     timestamp: datetime
+    agent_name: str = None
 
 
 class ChatTranscript(ScrollableContainer):
@@ -55,9 +56,13 @@ class ChatTranscript(ScrollableContainer):
         self._show_welcome = True
         self.refresh()
 
-    def append(self, role: str, content: str) -> None:
+    def append(self, role: str, content: str, agent_name: str = None) -> None:
         """Add a new message turn."""
-        self._turns.append(ChatTurn(role=role, content=content, timestamp=datetime.now()))
+        # Store agent name with the turn for display
+        turn = ChatTurn(role=role, content=content, timestamp=datetime.now())
+        if agent_name and role == "agent":
+            turn.agent_name = agent_name
+        self._turns.append(turn)
         self._show_welcome = False
         self._render_turns()
         # Auto-scroll to bottom
@@ -121,8 +126,13 @@ class ChatTranscript(ScrollableContainer):
             # Get display name for the role
             if turn.role.lower() == "user":
                 display_name = os.getenv("DISPLAY_NAME", "User")
+            elif turn.role.lower() == "agent":
+                # Use actual agent name if available
+                display_name = getattr(turn, 'agent_name', None) or "Agent"
+            elif turn.role.lower() == "reasoning":
+                display_name = "Thinking"
             else:
-                display_name = "Agent"
+                display_name = turn.role.title()
             
             # Format timestamp
             time_str = turn.timestamp.strftime("%H:%M")
@@ -191,6 +201,7 @@ class AnimaTUIApp(App):
         # Use existing backend
         self._agents: List[tuple] = []
         self._current_streaming = False
+        self._show_reasoning = False  # Add reasoning support
 
     def refresh_theme(self) -> None:
         """Refresh the UI after theme change."""
@@ -259,8 +270,19 @@ class AnimaTUIApp(App):
         transcript.show_welcome()
 
     def action_show_help(self) -> None:
-        """Show help information."""
-        self._emit_system("Commands: /help /status /agents /agent <id> /clear /quit")
+        """Show help information using original help text."""
+        help_text = """Commands:
+  /help     - Show this help
+  /status   - Show connection status
+  /agents   - List available agents
+  /agent <id> - Set agent by ID or number
+  /clear    - Clear screen
+  /reasoning - Toggle reasoning/thinking display
+  /quit     - Exit the application
+
+Note: Use /agent 5 to select agent #5 from the list
+Note: Use --reasoning flag to enable reasoning by default"""
+        self._emit_system(help_text)
 
     def action_show_agents(self) -> None:
         """List available agents."""
@@ -276,8 +298,12 @@ class AnimaTUIApp(App):
         server = config.letta_server_url
         self._emit_system(f"Server: {server}\nCurrent Agent: {current}")
 
-    def on_input_submitted(self, event: Input.Submitted) -> None:
-        """Handle message submission using existing backend."""
+    def action_show_status(self) -> None:
+        """Show status information."""
+        self.action_show_models()
+
+    async def on_input_submitted(self, event: Input.Submitted) -> None:
+        """Handle message submission using original simple_chat.py logic exactly."""
         message = event.value.strip()
         if not message:
             return
@@ -287,55 +313,129 @@ class AnimaTUIApp(App):
         
         # Handle commands
         if message.startswith('/'):
-            self._handle_command(message[1:])
+            await self._handle_command(message[1:])
             return
 
         # Add user message
         transcript = self.query_one("#transcript", ChatTranscript)
         transcript.append("user", message)
 
-        # Send to agent using existing backend
-        try:
-            # Get response from Letta (synchronous)
-            response_content = letta_client.send_message(message)
-            if response_content:
-                transcript.append("agent", response_content)
-            else:
-                transcript.append("system", "No response from agent")
-            
-        except Exception as e:
-            transcript.append("system", f"Error: {e}")
+        # Get agent name (exactly like original)
+        agent_name = "Assistant"  # Default fallback
+        if letta_client and letta_client.current_agent_id:
+            try:
+                agents = letta_client.list_agents()
+                if agents and isinstance(agents, list):
+                    for agent in agents:
+                        if isinstance(agent, dict) and 'id' in agent and 'name' in agent:
+                            if agent['id'] == letta_client.current_agent_id:
+                                agent_name = agent['name']
+                                break
+            except Exception:
+                # If we can't get the agent name, fall back to "Assistant"
+                pass
 
-    def _handle_command(self, command: str) -> None:
-        """Handle chat commands using existing backend functionality."""
+        try:
+            # Use streaming exactly like original simple_chat.py
+            response = ""
+            reasoning_buffer = ""
+            
+            async for chunk in letta_client.send_message_stream(message, show_reasoning=self._show_reasoning):
+                if chunk.startswith("__REASONING__:"):
+                    # This is reasoning content - buffer it
+                    reasoning_content = chunk[14:]  # Remove "__REASONING__:" prefix
+                    reasoning_buffer += reasoning_content
+                else:
+                    # This is regular content
+                    # If we have buffered reasoning, display it first
+                    if reasoning_buffer:
+                        transcript.append("reasoning", f"[Thinking] {reasoning_buffer}")
+                        reasoning_buffer = ""
+                    
+                    response += chunk
+            
+            # Handle any remaining reasoning buffer
+            if reasoning_buffer:
+                transcript.append("reasoning", f"[Thinking] {reasoning_buffer}")
+
+            # Display the complete response with actual agent name
+            if response:
+                transcript.append("agent", response, agent_name)
+
+        except Exception as e:
+            # Show actual error message like original
+            transcript.append("agent", f"Error: {e}", agent_name)
+
+    async def _handle_command(self, command: str) -> None:
+        """Handle chat commands using original simple_chat.py logic exactly."""
         parts = command.split()
         cmd = parts[0].lower()
         
         if cmd == "help":
             self.action_show_help()
         elif cmd == "status":
-            self.action_show_models()
+            self.action_show_status()
         elif cmd == "agents":
-            self.action_show_agents()
-        elif cmd == "agent" and len(parts) > 1:
-            # Set agent using existing backend
-            try:
-                agent_id = parts[1]
-                letta_client.set_agent(agent_id)
-                self._emit_system(f"Agent set to: {agent_id}")
-            except Exception as e:
-                self._emit_system(f"Error setting agent: {e}")
+            await self._list_agents()
+        elif cmd == "agent":
+            if len(parts) > 1:
+                await self._set_agent(parts[1])
+            else:
+                self._emit_system("Usage: /agent <id or number>")
         elif cmd == "clear":
             self.action_new_session()
+        elif cmd == "reasoning":
+            self._show_reasoning = not self._show_reasoning
+            status = "enabled" if self._show_reasoning else "disabled"
+            self._emit_system(f"Reasoning display {status}")
         elif cmd == "quit":
             self.exit()
         else:
-            self._emit_system(f"Unknown command: /{command}")
+            self._emit_system(f"Unknown command: /{cmd}. Type /help for available commands.")
+
+    async def _list_agents(self) -> None:
+        """List available agents using original logic."""
+        self._emit_system("Fetching available agents...")
+        agents = letta_client.list_agents()
+        if agents:
+            listing = f"Found {len(agents)} agents:\n"
+            for i, agent in enumerate(agents, 1):
+                listing += f"  {i}. {agent['name']} (ID: {agent['id']})\n"
+                if agent.get('description'):
+                    listing += f"      {agent['description']}\n"
+            self._emit_system(listing)
+        else:
+            self._emit_system("No agents found or error occurred")
+
+    async def _set_agent(self, agent_id: str) -> None:
+        """Set the active agent by ID or number using original logic."""
+        # Check if it's a number (from the list)
+        if agent_id.isdigit():
+            agents = letta_client.list_agents()
+            try:
+                agent_index = int(agent_id) - 1  # Convert to 0-based index
+                if 0 <= agent_index < len(agents):
+                    actual_agent_id = agents[agent_index]['id']
+                    if letta_client.set_agent(actual_agent_id):
+                        self._emit_system(f"Set agent: {agents[agent_index]['name']} (ID: {actual_agent_id})")
+                    else:
+                        self._emit_system(f"Failed to set agent: {agent_id}")
+                else:
+                    self._emit_system(f"Invalid agent number: {agent_id}. Use /agents to see available agents.")
+            except (ValueError, IndexError):
+                self._emit_system(f"Invalid agent number: {agent_id}. Use /agents to see available agents.")
+        else:
+            # Try as direct agent ID
+            if letta_client.set_agent(agent_id):
+                self._emit_system(f"Set agent: {agent_id}")
+            else:
+                self._emit_system(f"Failed to set agent: {agent_id}")
 
 
-def run():
+def run(reasoning=False):
     """Launch the enhanced TUI app."""
     app = AnimaTUIApp()
+    app._show_reasoning = reasoning  # Set reasoning flag
     app.run()
 
 
