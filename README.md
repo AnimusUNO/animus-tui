@@ -1,17 +1,18 @@
-# Animus Chat - Letta Simple Chat Client
+# Animus Chat - Enhanced TUI Chat Client
 
-A very simple, powerful text-based chat client for interacting with Letta AI agents. Built with Python and designed for developers who want a clean, terminal-based interface without the complexity of web UIs.
+A beautiful, modern terminal user interface (TUI) for interacting with Letta AI agents. Features a clean VS Code-inspired design with enhanced user experience for seamless agent conversations.
 
 ## 🚀 Features
 
-- **Simple Text Interface**: Clean, distraction-free terminal chat experience
-- **Real-time Streaming**: Live token-by-token response streaming from Letta agents
-- **Agent Management**: Easy agent selection by name or number from available agents
+- **Modern TUI Interface**: Beautiful VS Code-inspired terminal interface with clean design
+- **Real-time Streaming**: Live token-by-token response streaming from Letta agents  
+- **Enhanced Message Display**: Styled message boxes with user names and timestamps
+- **Agent Management**: Easy agent selection with visual command menu
 - **Cross-platform**: Works on Windows, macOS, and Linux
-- **Emoji Support**: Full Unicode and emoji support with Windows compatibility
-- **No Database**: All configuration and state stored in `.env` file
+- **Responsive Design**: Smooth resizing and adaptive layout
+- **Keyboard Shortcuts**: Convenient hotkeys for common actions (Ctrl+N, Ctrl+H, etc.)
+- **Professional Styling**: Clean borders, proper spacing, and modern color palette
 - **Comprehensive Testing**: 100% test coverage on core functionality
-- **Idempotent Setup**: Safe to run configuration multiple times
 
 ## 📋 Requirements
 

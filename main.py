@@ -27,10 +27,10 @@ from pathlib import Path
 # Add the current directory to Python path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from simple_chat import main
+from animaos import run
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Letta Chat Client')
+    parser = argparse.ArgumentParser(description='Animus Chat - Enhanced TUI')
     parser.add_argument('--verbose', '-v', action='store_true', 
                        help='Enable verbose logging output')
     parser.add_argument('--debug', '-d', action='store_true',
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     try:
-        asyncio.run(main(verbose=args.verbose, debug=args.debug, reasoning=args.reasoning))
+        run()  # Launch the enhanced TUI
     except KeyboardInterrupt:
         print("\nGoodbye!")
         sys.exit(0)
