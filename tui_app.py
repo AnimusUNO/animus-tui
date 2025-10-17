@@ -7,6 +7,7 @@ Copyright (C) 2024 AnimusUNO
 """
 import os
 import sys
+import asyncio
 from datetime import datetime
 from dataclasses import dataclass
 from typing import List, Optional
@@ -14,7 +15,7 @@ from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.containers import Vertical, Horizontal, ScrollableContainer
-from textual.widgets import Static, Input, Footer
+from textual.widgets import Static, Input, Footer, Markdown
 from textual.binding import Binding
 from textual.message import Message
 from rich.text import Text
@@ -68,11 +69,25 @@ class ChatTranscript(ScrollableContainer):
         # Auto-scroll to bottom
         self.scroll_end()
 
-    def update_last(self, content: str) -> None:
+    def update_last(self, content: str, agent_name: str = None) -> None:
         """Update the last message (for streaming)."""
         if self._turns:
             self._turns[-1].content = content
+            if agent_name and self._turns[-1].role == "agent":
+                self._turns[-1].agent_name = agent_name
+            # Re-render all turns to maintain chat history
             self._render_turns()
+    
+    def finalize_streaming_message(self, agent_name: str = None) -> None:
+        """Finalize the streaming message by adding timestamp."""
+        if self._turns and self._turns[-1].role == "agent":
+            # Add timestamp to the final message
+            from theme import get_palette
+            palette = get_palette()
+            time_str = self._turns[-1].timestamp.strftime("%H:%M")
+            self._turns[-1].content += f"\n{agent_name} ({time_str})"
+            self._render_turns()
+
 
     def show_welcome(self) -> None:
         """Display the welcome screen."""
@@ -95,10 +110,10 @@ class ChatTranscript(ScrollableContainer):
         welcome_text.append("\n\n")
         welcome_text.append("                                  animaOS v0.1.0\n", style=f"bold {palette.text_primary}")
         welcome_text.append("                   ────────────────────────────────────────────\n", style=f"{palette.text_secondary}")
-        welcome_text.append("                         /new      new session    ctrl+n\n", style=f"{palette.text_secondary}")
         welcome_text.append("                         /help     show help      ctrl+h\n", style=f"{palette.text_secondary}")
         welcome_text.append("                         /agents   list agents    ctrl+a\n", style=f"{palette.text_secondary}")
         welcome_text.append("                         /models   list models    ctrl+m\n", style=f"{palette.text_secondary}")
+        welcome_text.append("                         /clear    new session    ctrl+n\n", style=f"{palette.text_secondary}")
         welcome_text.append("                                  /quit     exit\n", style=f"{palette.text_secondary}")
         welcome_text.append("                   ────────────────────────────────────────────\n", style=f"{palette.text_secondary}")
         welcome_text.append("                        Type a message to begin chatting.\n", style=f"{palette.text_secondary}")
@@ -234,6 +249,8 @@ class AnimaTUIApp(App):
         """Initialize the app with welcome screen."""
         self.query_one("#transcript", ChatTranscript).show_welcome()
         self._load_agents()
+        # Auto-focus the input field for better UX
+        self.set_focus(self.query_one("#prompt"))
 
     def _load_agents(self) -> None:
         """Load agents using existing backend."""
@@ -302,7 +319,7 @@ Note: Use --reasoning flag to enable reasoning by default"""
         """Show status information."""
         self.action_show_models()
 
-    async def on_input_submitted(self, event: Input.Submitted) -> None:
+    def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle message submission using original simple_chat.py logic exactly."""
         message = event.value.strip()
         if not message:
@@ -313,14 +330,22 @@ Note: Use --reasoning flag to enable reasoning by default"""
         
         # Handle commands
         if message.startswith('/'):
-            await self._handle_command(message[1:])
+            self.call_after_refresh(self._handle_command, message[1:])
             return
 
         # Add user message
         transcript = self.query_one("#transcript", ChatTranscript)
         transcript.append("user", message)
 
-        # Get agent name (exactly like original)
+        # Start async streaming in background
+        self.call_after_refresh(self._stream_response, message)
+        
+        # Keep focus on input for better UX
+        self.set_focus(event.input)
+
+    async def _stream_response(self, message: str) -> None:
+        """Handle streaming response exactly like original simple_chat.py."""
+        # Get agent name exactly like original
         agent_name = "Assistant"  # Default fallback
         if letta_client and letta_client.current_agent_id:
             try:
@@ -335,10 +360,15 @@ Note: Use --reasoning flag to enable reasoning by default"""
                 # If we can't get the agent name, fall back to "Assistant"
                 pass
 
+        transcript = self.query_one("#transcript", ChatTranscript)
+        
         try:
-            # Use streaming exactly like original simple_chat.py
+            # Start streaming response
             response = ""
             reasoning_buffer = ""
+            
+            # Start with agent name prefix like original
+            transcript.append("agent", f"[{agent_name}] ", agent_name)
             
             async for chunk in letta_client.send_message_stream(message, show_reasoning=self._show_reasoning):
                 if chunk.startswith("__REASONING__:"):
@@ -350,17 +380,19 @@ Note: Use --reasoning flag to enable reasoning by default"""
                     # If we have buffered reasoning, display it first
                     if reasoning_buffer:
                         transcript.append("reasoning", f"[Thinking] {reasoning_buffer}")
+                        response += f"[Thinking] {reasoning_buffer}"
                         reasoning_buffer = ""
                     
+                    # Stream the chunk exactly as received from API
+                    transcript.update_last(f"[{agent_name}] {response}{chunk}", agent_name)
                     response += chunk
+                    
+                    # Allow UI to refresh after each chunk
+                    await asyncio.sleep(0.01)
             
             # Handle any remaining reasoning buffer
             if reasoning_buffer:
                 transcript.append("reasoning", f"[Thinking] {reasoning_buffer}")
-
-            # Display the complete response with actual agent name
-            if response:
-                transcript.append("agent", response, agent_name)
 
         except Exception as e:
             # Show actual error message like original
