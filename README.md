@@ -1,4 +1,4 @@
-# Animus Chat - Letta Simple Chat Client
+# Animus TUI - Simple Text User Interface
 
 A very simple, powerful text-based chat client for interacting with Letta AI agents. Built with Python and designed for developers who want a clean, terminal-based interface without the complexity of web UIs.
 
