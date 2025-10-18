@@ -202,15 +202,64 @@ class AnimaTUIApp(App):
         self._agents: List[tuple] = []
         self._current_streaming = False
         self._show_reasoning = False  # Add reasoning support
+        
+        # Load saved theme preference
+        self._load_theme_preference()
 
     def refresh_theme(self) -> None:
-        """Refresh the UI after theme change."""
-        self.refresh()
-        transcript = self.query_one("#transcript", ChatTranscript)
-        if transcript._show_welcome:
-            transcript.show_welcome()
-        else:
-            transcript._render_turns()
+        """Refresh the theme when dark mode changes.""" 
+        # Force a refresh by toggling dark mode
+        current_dark = self.dark
+        self.dark = not current_dark  # Toggle briefly
+        self.dark = current_dark      # Set back to desired state
+        
+        # Save theme preference when it changes
+        self._save_theme_preference()
+
+    def _load_theme_preference(self) -> None:
+        """Load saved theme preference from config file."""
+        import json
+        from theme import set_theme, set_dark_mode
+        config_file = Path(__file__).parent / ".tui_config.json"
+        try:
+            if config_file.exists():
+                with open(config_file, 'r') as f:
+                    config = json.load(f)
+                    # Load custom theme name if available
+                    if 'custom_theme' in config:
+                        set_theme(config['custom_theme'])
+                    # Load Textual theme if available
+                    if 'theme' in config:
+                        self.theme = config['theme']
+                    # Load dark mode
+                    if 'dark_mode' in config:
+                        self.dark = config['dark_mode']
+                        set_dark_mode(config['dark_mode'])
+        except Exception:
+            # Silently fail - not critical
+            pass
+
+    def _save_theme_preference(self) -> None:
+        """Save theme preference to config file."""
+        import json
+        from theme import _current_theme
+        config_file = Path(__file__).parent / ".tui_config.json"
+        try:
+            config = {}
+            # Load existing config if it exists
+            if config_file.exists():
+                with open(config_file, 'r') as f:
+                    config = json.load(f)
+            # Save current theme info
+            config['custom_theme'] = _current_theme
+            config['theme'] = self.theme
+            config['dark_mode'] = self.dark
+            # Save back
+            with open(config_file, 'w') as f:
+                json.dump(config, f, indent=2)
+        except Exception as e:
+            # Silently fail - not critical
+            pass
 
     BINDINGS = [
         Binding("ctrl+q", "quit", "Quit"),
