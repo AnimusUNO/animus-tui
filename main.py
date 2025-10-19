@@ -28,6 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from simple_chat import main
+from tui_app import run as run_tui
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Letta Chat Client')
@@ -37,11 +38,18 @@ if __name__ == "__main__":
                        help='Enable debug logging output')
     parser.add_argument('--reasoning', '-r', action='store_true',
                        help='Show agent reasoning/thinking process')
+    parser.add_argument('--text', '-t', action='store_true',
+                       help='Use original text interface instead of TUI')
     
     args = parser.parse_args()
     
     try:
-        asyncio.run(main(verbose=args.verbose, debug=args.debug, reasoning=args.reasoning))
+        if args.text:
+            # Use original text interface when requested
+            asyncio.run(main(verbose=args.verbose, debug=args.debug, reasoning=args.reasoning))
+        else:
+            # Use enhanced TUI by default - pass reasoning flag
+            run_tui(reasoning=args.reasoning)
     except KeyboardInterrupt:
         print("\nGoodbye!")
         sys.exit(0)
