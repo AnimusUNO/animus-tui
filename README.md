@@ -1,4 +1,4 @@
-# Animus TUI - Simple Text User Interface
+# Animus Chat - Letta Simple Chat Client
 
 A very simple, powerful text-based chat client for interacting with Letta AI agents. Built with Python and designed for developers who want a clean, terminal-based interface without the complexity of web UIs.
 
@@ -85,6 +85,9 @@ python main.py
 - `/agents` - List all available agents
 - `/agent <id>` or `/agent <number>` - Switch to specific agent
 - `/clear` - Clear the screen
+- `/vibe` - Enter vibe mode (autonomous) and send the configured vibe prompt once
+- `/vibe stop` - Stop autonomous vibe mode
+- `/vibe status` - Show autonomous vibe mode status
 - `/quit` - Exit the application
 
 ### Example Session
@@ -193,6 +196,17 @@ animus-chat/
 - **Validation**: Checks for required values and valid URLs
 - **Auto-save**: Automatically saves configuration to `.env`
 - **Error Handling**: Clear error messages for configuration issues
+
+### Vibe Mode Configuration
+
+Add these optional keys to your `.env` to control autonomous vibe mode:
+
+```
+VIBE_MODE_PROMPT="your vibe prompt here"
+VIBE_INTERVAL_SECONDS=180
+VIBE_LOG_FILE=vibe_mode.log
+VIBE_CONTROL_FILE=.vibe_control.json
+```
 
 ## 🚀 Development
 

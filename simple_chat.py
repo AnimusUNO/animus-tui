@@ -140,6 +140,7 @@ def print_help():
     print("  /agent <id> - Set agent by ID or number")
     print("  /clear    - Clear screen")
     print("  /reasoning - Toggle reasoning/thinking display")
+    print("  /vibe     - Enter vibe mode")
     print("  /quit     - Exit the application")
     print("\nNote: Use /agent 5 to select agent #5 from the list")
     print("Note: Use --reasoning flag to enable reasoning by default")
@@ -308,6 +309,32 @@ async def main(verbose=False, debug=False, reasoning=False):
                 elif command == 'reasoning':
                     show_reasoning = not show_reasoning
                     print(f"Reasoning display: {'ON' if show_reasoning else 'OFF'}")
+                elif command == 'vibe':
+                    # Subcommands: start (default), stop, status
+                    sub = arg.strip().lower()
+                    if sub == 'stop':
+                        _vibe_write_command('stop')
+                        print("[System] Vibe mode stopping…")
+                        print()
+                        continue
+                    if sub == 'status':
+                        state = _vibe_read_state()
+                        if state:
+                            print(f"[System] Vibe status: {state.get('status','unknown')} pid={state.get('pid','?')} last_run={state.get('last_run','-')}")
+                        else:
+                            print("[System] Vibe status: not running")
+                        print()
+                        continue
+
+                    started = _vibe_start_process_if_needed()
+                    if started:
+                        print("[System] Entering vibe mode (autonomous)")
+                        _vibe_write_command('start')
+                    else:
+                        print("[System] Vibe mode already running")
+                    print()
+                    # Also send one immediate prompt to agent
+                    await send_message(config.vibe_mode_prompt)
                 elif command == 'quit':
                     print("Goodbye!")
                     break
@@ -329,3 +356,50 @@ async def main(verbose=False, debug=False, reasoning=False):
 
 if __name__ == "__main__":
     asyncio.run(main())
+
+# ----- Vibe helpers (file-based control) -----
+def _vibe_control_path():
+    from pathlib import Path
+    return Path(config.vibe_control_file)
+
+def _vibe_read_state():
+    import json
+    try:
+        p = _vibe_control_path()
+        if not p.exists():
+            return {}
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+def _vibe_write_command(command: str):
+    import json
+    st = _vibe_read_state()
+    st.update({"last_command": command})
+    try:
+        _vibe_control_path().write_text(json.dumps(st, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+def _vibe_process_running(pid: int) -> bool:
+    if not pid:
+        return False
+    try:
+        os.kill(pid, 0)  # type: ignore[attr-defined]
+        return True
+    except Exception:
+        return False
+
+def _vibe_start_process_if_needed() -> bool:
+    st = _vibe_read_state()
+    pid = st.get("pid")
+    if pid and _vibe_process_running(pid):
+        return False
+    try:
+        import subprocess, sys
+        from pathlib import Path
+        script_path = str((Path(__file__).parent / "vibe_mode.py"))
+        subprocess.Popen([sys.executable, script_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=str(Path(__file__).parent))
+        return True
+    except Exception:
+        return False
