@@ -102,19 +102,80 @@ THEMES: Dict[str, Dict[str, str]] = {
         "accent": "#076678",
         "success": "#79740e",
         "warning": "#b57614",
-        "error": "#cc241d",
-        "border": "#bdae93"
+        "error": "#9d0006",
+        "border": "#d5c4a1"
+    },
+    "monokai": {
+        "background": "#272822",
+        "surface": "#3e3d32",
+        "surface_alt": "#49483e",
+        "text_primary": "#f8f8f2",
+        "text_secondary": "#75715e",
+        "accent": "#66d9ef",
+        "success": "#a6e22e",
+        "warning": "#e6db74",
+        "error": "#f92672",
+        "border": "#49483e"
+    },
+    "solarized-dark": {
+        "background": "#002b36",
+        "surface": "#073642",
+        "surface_alt": "#586e75",
+        "text_primary": "#839496",
+        "text_secondary": "#586e75",
+        "accent": "#268bd2",
+        "success": "#859900",
+        "warning": "#b58900",
+        "error": "#dc322f",
+        "border": "#073642"
+    },
+    "solarized-light": {
+        "background": "#fdf6e3",
+        "surface": "#eee8d5",
+        "surface_alt": "#93a1a1",
+        "text_primary": "#657b83",
+        "text_secondary": "#93a1a1",
+        "accent": "#268bd2",
+        "success": "#859900",
+        "warning": "#b58900",
+        "error": "#dc322f",
+        "border": "#eee8d5"
+    },
+    "tokyo-night": {
+        "background": "#1a1b26",
+        "surface": "#24283b",
+        "surface_alt": "#414868",
+        "text_primary": "#c0caf5",
+        "text_secondary": "#565f89",
+        "accent": "#7aa2f7",
+        "success": "#9ece6a",
+        "warning": "#e0af68",
+        "error": "#f7768e",
+        "border": "#414868"
+    },
+    "catppuccin-mocha": {
+        "background": "#1e1e2e",
+        "surface": "#313244",
+        "surface_alt": "#45475a",
+        "text_primary": "#cdd6f4",
+        "text_secondary": "#bac2de",
+        "accent": "#89b4fa",
+        "success": "#a6e3a1",
+        "warning": "#f9e2af",
+        "error": "#f38ba8",
+        "border": "#45475a"
     }
 }
 
-# Global state
+# Global palette instance
 _palette = Palette()
 _current_theme = "vscode-dark"
 _dark_mode = True
 
-
 def get_palette() -> Palette:
-    """Get the current palette with applied theme."""
+    """Get the current palette based on selected theme."""
+    global _palette, _current_theme
+    
     # Get theme colors
     theme_colors = THEMES.get(_current_theme, THEMES["vscode-dark"])
     

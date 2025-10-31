@@ -5,6 +5,7 @@ Maps beautiful UI to existing animus-chat functionality
 
 Copyright (C) 2024 AnimusUNO
 """
+import asyncio
 import os
 import sys
 from datetime import datetime
@@ -19,6 +20,8 @@ from textual.binding import Binding
 from textual.message import Message
 from rich.text import Text
 from rich.console import Console
+from rich.markdown import Markdown
+import re
 
 # Import the existing backend functionality
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -35,6 +38,101 @@ class ChatTurn:
     content: str
     timestamp: datetime
     agent_name: str = None
+
+
+def parse_markdown_to_rich(text: str, base_style: str = "") -> Text:
+    """Parse markdown formatting and convert to Rich Text object."""
+    from theme import get_palette
+    palette = get_palette()
+    
+    # Replace literal \n with actual newlines (LLMs sometimes output this)
+    text = text.replace('\\n', '\n')
+    
+    result = Text()
+    
+    # Split by lines to handle formatting line by line
+    lines = text.split('\n')
+    
+    for line_idx, line in enumerate(lines):
+        if line_idx > 0:
+            result.append('\n')
+        
+        # Handle list items
+        list_match = re.match(r'^(\s*)([-*]|\d+\.)\s+(.*)$', line)
+        if list_match:
+            indent = list_match.group(1)
+            marker = list_match.group(2)
+            content = list_match.group(3)
+            result.append(indent)
+            result.append(f"{marker} ", style=f"{palette.accent}")
+            # Parse the rest of the line for formatting
+            line = content
+        
+        # Handle headers
+        header_match = re.match(r'^(#{1,6})\s+(.*)$', line)
+        if header_match:
+            level = len(header_match.group(1))
+            content = header_match.group(2)
+            # Render headers as bold with accent color
+            result.append(content, style=f"bold {palette.accent}")
+            continue
+        
+        # Parse inline markdown patterns
+        # Pattern priority: links, bold, italic, code
+        patterns = [
+            (r'\[([^\]]+)\]\(([^)]+)\)', 'link'),  # [text](url)
+            (r'\*\*([^*]+)\*\*', 'bold'),           # **bold**
+            (r'__([^_]+)__', 'bold'),               # __bold__
+            (r'\*([^*]+)\*', 'italic'),             # *italic*
+            (r'_([^_]+)_', 'italic'),               # _italic_
+            (r'`([^`]+)`', 'code'),                 # `code`
+        ]
+        
+        # Find all matches
+        matches = []
+        for pattern, match_type in patterns:
+            for match in re.finditer(pattern, line):
+                matches.append((match.start(), match.end(), match, match_type))
+        
+        # Sort by position
+        matches.sort(key=lambda x: x[0])
+        
+        # Remove overlapping matches (keep first)
+        filtered = []
+        last_end = 0
+        for start, end, match, match_type in matches:
+            if start >= last_end:
+                filtered.append((start, end, match, match_type))
+                last_end = end
+        
+        # Build the rich text
+        last_pos = 0
+        for start, end, match, match_type in filtered:
+            # Add text before match
+            if start > last_pos:
+                result.append(line[last_pos:start], style=base_style)
+            
+            # Add formatted text
+            if match_type == 'link':
+                text_part = match.group(1)
+                url = match.group(2)
+                # Show link text with URL in parentheses (clickable not possible in TUI)
+                result.append(text_part, style=f"bold {palette.accent} underline")
+                result.append(f" ({url})", style=f"{palette.text_secondary}")
+            elif match_type == 'bold':
+                result.append(match.group(1), style=f"bold {base_style}")
+            elif match_type == 'italic':
+                result.append(match.group(1), style=f"italic {base_style}")
+            elif match_type == 'code':
+                result.append(f" {match.group(1)} ", style=f"{palette.warning} on {palette.surface_alt}")
+            
+            last_pos = end
+        
+        # Add remaining text
+        if last_pos < len(line):
+            result.append(line[last_pos:], style=base_style)
+    
+    return result
 
 
 class ChatTranscript(ScrollableContainer):
@@ -73,6 +171,12 @@ class ChatTranscript(ScrollableContainer):
         if self._turns:
             self._turns[-1].content = content
             self._render_turns()
+    
+    def remove_last(self) -> None:
+        """Remove the last message."""
+        if self._turns:
+            self._turns.pop()
+            self._render_turns()
 
     def show_welcome(self) -> None:
         """Display the welcome screen."""
@@ -82,23 +186,29 @@ class ChatTranscript(ScrollableContainer):
         self._show_welcome = True
         self._turns.clear()
         
+        # Determine ASCII art color based on theme mode
+        from theme import _dark_mode, _current_theme
+        # Use white for dark themes, black for light themes
+        ascii_color = "white" if _dark_mode else "black"
+        
         welcome_text = Text()
         welcome_text.append("\n")
-        welcome_text.append("                       ███                               ███████     █████████ \n", style=f"{palette.accent}")
-        welcome_text.append("                      ░░░                              ███░░░░░███  ███░░░░░███\n", style=f"{palette.accent}")
-        welcome_text.append("  ██████   ████████   ████  █████████████    ██████   ███     ░░███░███    ░░░ \n", style=f"{palette.accent}")
-        welcome_text.append(" ░░░░░███ ░░███░░███ ░░███ ░░███░░███░░███  ░░░░░███ ░███      ░███░░█████████ \n", style=f"{palette.accent}")
-        welcome_text.append("  ███████  ░███ ░███  ░███  ░███ ░███ ░███   ███████ ░███      ░███ ░░░░░░░░███\n", style=f"{palette.accent}")
-        welcome_text.append(" ███░░███  ░███ ░███  ░███  ░███ ░███ ░███  ███░░███ ░░███     ███  ███    ░███\n", style=f"{palette.accent}")
-        welcome_text.append("░░████████ ████ █████ █████ █████░███ █████░░████████ ░░░███████░  ░░█████████ \n", style=f"{palette.accent}")
-        welcome_text.append(" ░░░░░░░░ ░░░░ ░░░░░ ░░░░░ ░░░░░ ░░░ ░░░░░  ░░░░░░░░    ░░░░░░░     ░░░░░░░░░  \n", style=f"{palette.accent}")
+        welcome_text.append("                       ███                               ███████     █████████ \n", style=ascii_color)
+        welcome_text.append("                      ░░░                              ███░░░░░███  ███░░░░░███\n", style=ascii_color)
+        welcome_text.append("  ██████   ████████   ████  █████████████    ██████   ███     ░░███░███    ░░░ \n", style=ascii_color)
+        welcome_text.append(" ░░░░░███ ░░███░░███ ░░███ ░░███░░███░░███  ░░░░░███ ░███      ░███░░█████████ \n", style=ascii_color)
+        welcome_text.append("  ███████  ░███ ░███  ░███  ░███ ░███ ░███   ███████ ░███      ░███ ░░░░░░░░███\n", style=ascii_color)
+        welcome_text.append(" ███░░███  ░███ ░███  ░███  ░███ ░███ ░███  ███░░███ ░░███     ███  ███    ░███\n", style=ascii_color)
+        welcome_text.append("░░████████ ████ █████ █████ █████░███ █████░░████████ ░░░███████░  ░░█████████ \n", style=ascii_color)
+        welcome_text.append(" ░░░░░░░░ ░░░░ ░░░░░ ░░░░░ ░░░░░ ░░░ ░░░░░  ░░░░░░░░    ░░░░░░░     ░░░░░░░░░  \n", style=ascii_color)
         welcome_text.append("\n\n")
         welcome_text.append("                                  animaOS v0.1.0\n", style=f"bold {palette.text_primary}")
         welcome_text.append("                   ────────────────────────────────────────────\n", style=f"{palette.text_secondary}")
         welcome_text.append("                         /new      new session    ctrl+n\n", style=f"{palette.text_secondary}")
         welcome_text.append("                         /help     show help      ctrl+h\n", style=f"{palette.text_secondary}")
         welcome_text.append("                         /agents   list agents    ctrl+a\n", style=f"{palette.text_secondary}")
-        welcome_text.append("                         /models   list models    ctrl+m\n", style=f"{palette.text_secondary}")
+        welcome_text.append("                         /status   show status    ctrl+s\n", style=f"{palette.text_secondary}")
+        welcome_text.append("                         /text     text palettes\n", style=f"{palette.text_secondary}")
         welcome_text.append("                                  /quit     exit\n", style=f"{palette.text_secondary}")
         welcome_text.append("                   ────────────────────────────────────────────\n", style=f"{palette.text_secondary}")
         welcome_text.append("                        Type a message to begin chatting.\n", style=f"{palette.text_secondary}")
@@ -106,9 +216,9 @@ class ChatTranscript(ScrollableContainer):
         
         # Check connection status
         if letta_client.test_connection():
-            welcome_text.append("                               Connected to Letta.\n", style=f"{palette.success}")
+            welcome_text.append("                        Connected to Animus (Letta Instance)\n", style=f"{palette.success}")
         else:
-            welcome_text.append("                            Connection to Letta failed.\n", style=f"{palette.error}")
+            welcome_text.append("                      Connection to Animus (Letta Instance) failed.\n", style=f"{palette.error}")
             
         self._content_widget.update(welcome_text)
 
@@ -146,9 +256,20 @@ class ChatTranscript(ScrollableContainer):
                         display.append("\n")
                     display.append(f"  {line}  ", style=f"bold {palette.text_primary} on {palette.surface_alt}")
                 display.append(f"\n{display_name} ({time_str})", style=f"{palette.text_secondary}")
+            elif turn.role.lower() == "reasoning":
+                # Reasoning block - styled prominently like Letta interface (purple/lavender)
+                # Use accent color with italic styling for reasoning
+                reasoning_lines = turn.content.split('\n')
+                for j, line in enumerate(reasoning_lines):
+                    if j > 0:
+                        display.append("\n")
+                    # Purple/lavender color for reasoning (using accent or a custom purple)
+                    display.append(f"  {line}  ", style=f"italic {palette.accent}")
+                display.append(f"\n{display_name} ({time_str})", style=f"dim {palette.text_secondary}")
             else:
-                # Agent message
-                display.append(f"{turn.content}", style=f"{palette.text_primary}")
+                # Agent message - parse markdown formatting
+                formatted_content = parse_markdown_to_rich(turn.content, palette.text_primary)
+                display.append(formatted_content)
                 display.append(f"\n{display_name} ({time_str})", style=f"{palette.text_secondary}")
         
         self._content_widget.update(display)
@@ -179,13 +300,13 @@ class AnimaTUIApp(App):
     }
     #transcript { 
         height: 1fr; 
-        border: solid $primary; 
+        border: solid grey; 
         padding: 1; 
         background: $surface;
     }
     #prompt { 
         width: 100%; 
-        border: solid $primary; 
+        border: solid grey; 
         background: $panel; 
         color: $text; 
         padding: 0 1; 
@@ -202,20 +323,71 @@ class AnimaTUIApp(App):
         self._agents: List[tuple] = []
         self._current_streaming = False
         self._show_reasoning = False  # Add reasoning support
+        self._loading_task = None  # Background task for loading animation
         
         # Load saved theme preference
         self._load_theme_preference()
 
     def refresh_theme(self) -> None:
-        """Refresh the theme when dark mode changes.""" 
-        # Force a refresh by toggling dark mode
-        current_dark = self.dark
-        self.dark = not current_dark  # Toggle briefly
-        self.dark = current_dark      # Set back to desired state
-        
-        # Save theme preference when it changes
-        self._save_theme_preference()
+        """Refresh the UI after theme change."""
+        self.refresh()
+        transcript = self.query_one("#transcript", ChatTranscript)
+        if transcript._show_welcome:
+            transcript.show_welcome()
+        else:
+            transcript._render_turns()
 
+    BINDINGS = [
+        Binding("ctrl+q", "quit", "Quit"),
+        Binding("ctrl+n", "new_session", "New"),
+        Binding("ctrl+h", "show_help", "Help"),
+        Binding("ctrl+a", "show_agents", "Agents"),
+        Binding("ctrl+s", "show_status", "Status"),
+    ]
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="layout"):
+            transcript = ChatTranscript()
+            transcript.id = "transcript"
+            yield transcript
+            prompt = Input(placeholder="Type your message here...")
+            prompt.id = "prompt"
+            yield prompt
+        yield Footer()
+
+    def on_mount(self) -> None:
+        """Initialize the app with welcome screen."""
+        # Load theme preference must happen before setting dark mode
+        # (already called in __init__, but we refresh here to apply it)
+        self.refresh_theme()
+        self.query_one("#transcript", ChatTranscript).show_welcome()
+        self._load_agents()
+
+    def _load_agents(self) -> None:
+        """Load agents using existing backend."""
+        try:
+            agents = letta_client.list_agents()
+            if agents:
+                self._agents = [(agent["id"], agent["name"]) for agent in agents]
+        except Exception as e:
+            self._emit_system(f"Error loading agents: {e}")
+
+    def _emit_system(self, message: str) -> None:
+        """Add a system message."""
+        transcript = self.query_one("#transcript", ChatTranscript)
+        transcript.append("system", message)
+
+    def watch_dark(self, dark: bool) -> None:
+        """Called when dark mode changes."""
+        from theme import set_dark_mode
+        set_dark_mode(dark)
+        self._save_theme_preference()
+        self.refresh_theme()
+    
+    def watch_theme(self, theme: str) -> None:
+        """Called when theme changes."""
+        self._save_theme_preference()
+    
     def _load_theme_preference(self) -> None:
         """Load saved theme preference from config file."""
         import json
@@ -236,9 +408,9 @@ class AnimaTUIApp(App):
                         self.dark = config['dark_mode']
                         set_dark_mode(config['dark_mode'])
         except Exception:
-            # Silently fail - not critical
+            # If loading fails, use defaults
             pass
-
+    
     def _save_theme_preference(self) -> None:
         """Save theme preference to config file."""
         import json
@@ -261,57 +433,6 @@ class AnimaTUIApp(App):
             # Silently fail - not critical
             pass
 
-    BINDINGS = [
-        Binding("ctrl+q", "quit", "Quit"),
-        Binding("ctrl+n", "new_session", "New"),
-        Binding("ctrl+h", "show_help", "Help"),
-        Binding("ctrl+a", "show_agents", "Agents"),
-        Binding("ctrl+m", "show_models", "Models"),
-    ]
-
-    def compose(self) -> ComposeResult:
-        with Vertical(id="layout"):
-            transcript = ChatTranscript()
-            transcript.id = "transcript"
-            yield transcript
-            prompt = Input(placeholder="Type your message here...")
-            prompt.id = "prompt"
-            yield prompt
-        yield Footer()
-
-    def on_mount(self) -> None:
-        """Initialize the app with welcome screen."""
-        self.query_one("#transcript", ChatTranscript).show_welcome()
-        self._load_agents()
-
-    def _load_agents(self) -> None:
-        """Load agents using existing backend."""
-        try:
-            agents = letta_client.list_agents()
-            if agents:
-                self._agents = [(agent["id"], agent["name"]) for agent in agents]
-        except Exception as e:
-            self._emit_system(f"Error loading agents: {e}")
-
-    def _emit_system(self, message: str) -> None:
-        """Add a system message."""
-        transcript = self.query_one("#transcript", ChatTranscript)
-        transcript.append("system", message)
-
-    def refresh_theme(self) -> None:
-        """Refresh the UI after theme change."""
-        self._update_css()
-        self.refresh()
-        transcript = self.query_one("#transcript", ChatTranscript)
-        if transcript._show_welcome:
-            transcript.show_welcome()
-        else:
-            transcript._render_turns()
-
-    def watch_dark(self, dark: bool) -> None:
-        """Called when dark mode changes."""
-        self.refresh_theme()
-
     def action_new_session(self) -> None:
         """Start a new chat session."""
         transcript = self.query_one("#transcript", ChatTranscript)
@@ -325,8 +446,11 @@ class AnimaTUIApp(App):
   /status   - Show connection status
   /agents   - List available agents
   /agent <id> - Set agent by ID or number
+  /text     - List available text color palettes
+  /text <name> - Set text palette (e.g., /text nord)
   /clear    - Clear screen
   /reasoning - Toggle reasoning/thinking display
+  /vibe     - Enter vibe mode 
   /quit     - Exit the application
 
 Note: Use /agent 5 to select agent #5 from the list
@@ -350,6 +474,17 @@ Note: Use --reasoning flag to enable reasoning by default"""
     def action_show_status(self) -> None:
         """Show status information."""
         self.action_show_models()
+    
+    async def _animate_loading(self) -> None:
+        """Animate the loading indicator with a rotating spinner (inspired by Gum)."""
+        transcript = self.query_one("#transcript", ChatTranscript)
+        # Unicode spinner frames (dots style - smooth and modern)
+        frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+        idx = 0
+        while self._current_streaming:
+            transcript.update_last(f"{frames[idx]} Thinking...")
+            idx = (idx + 1) % len(frames)
+            await asyncio.sleep(0.08)  # Fast animation (80ms per frame)
 
     async def on_input_submitted(self, event: Input.Submitted) -> None:
         """Handle message submission using original simple_chat.py logic exactly."""
@@ -357,7 +492,7 @@ Note: Use --reasoning flag to enable reasoning by default"""
         if not message:
             return
 
-        # Clear input
+        # Clear input immediately for instant feedback
         event.input.value = ""
         
         # Handle commands
@@ -368,9 +503,17 @@ Note: Use --reasoning flag to enable reasoning by default"""
         # Add user message
         transcript = self.query_one("#transcript", ChatTranscript)
         transcript.append("user", message)
+        
+        # Send message to agent
+        await self._send_message_to_agent(message)
 
-        # Get agent name (exactly like original)
+    async def _send_message_to_agent(self, message: str) -> None:
+        """Helper method to send a message to the agent and handle streaming response."""
+        transcript = self.query_one("#transcript", ChatTranscript)
+        
+        # Get agent name and model info FIRST (quick)
         agent_name = "Assistant"  # Default fallback
+        model_name = "Model"
         if letta_client and letta_client.current_agent_id:
             try:
                 agents = letta_client.list_agents()
@@ -379,39 +522,83 @@ Note: Use --reasoning flag to enable reasoning by default"""
                         if isinstance(agent, dict) and 'id' in agent and 'name' in agent:
                             if agent['id'] == letta_client.current_agent_id:
                                 agent_name = agent['name']
+                                # Try multiple paths to get model name
+                                if 'llm_config' in agent:
+                                    llm_config = agent['llm_config']
+                                    if isinstance(llm_config, dict):
+                                        model_name = llm_config.get('model', llm_config.get('model_name', 'Model'))
+                                    elif isinstance(llm_config, str):
+                                        model_name = llm_config
+                                elif 'model' in agent:
+                                    model_name = agent['model']
+                                # Clean up model name (remove provider prefix if present)
+                                if isinstance(model_name, str) and '/' in model_name:
+                                    model_name = model_name.split('/')[-1]
                                 break
-            except Exception:
-                # If we can't get the agent name, fall back to "Assistant"
+            except Exception as e:
+                # If we can't get the agent info, fall back to defaults
                 pass
+        
+        # Add loading indicator with model name
+        transcript.append("agent", "⠋ Thinking...", model_name)
+        transcript.scroll_end()
+        
+        # Start loading animation
+        self._current_streaming = True
+        loading_task = asyncio.create_task(self._animate_loading())
+        
+        # Yield to event loop to let animation start
+        await asyncio.sleep(0)
 
         try:
-            # Use streaming exactly like original simple_chat.py
-            response = ""
-            reasoning_buffer = ""
+            # Stream reasoning and answer incrementally
+            first_chunk = True
+            agent_started = False
             
             async for chunk in letta_client.send_message_stream(message, show_reasoning=self._show_reasoning):
-                if chunk.startswith("__REASONING__:"):
-                    # This is reasoning content - buffer it
-                    reasoning_content = chunk[14:]  # Remove "__REASONING__:" prefix
-                    reasoning_buffer += reasoning_content
-                else:
-                    # This is regular content
-                    # If we have buffered reasoning, display it first
-                    if reasoning_buffer:
-                        transcript.append("reasoning", f"[Thinking] {reasoning_buffer}")
-                        reasoning_buffer = ""
-                    
-                    response += chunk
-            
-            # Handle any remaining reasoning buffer
-            if reasoning_buffer:
-                transcript.append("reasoning", f"[Thinking] {reasoning_buffer}")
+                # Normalize content
+                current_text = chunk
 
-            # Display the complete response with actual agent name
-            if response:
-                transcript.append("agent", response, agent_name)
+                # Handle reasoning chunks emitted by letta_api with special marker
+                if isinstance(current_text, str) and current_text.startswith("__REASONING__:"):
+                    reasoning_content = current_text[14:]
+                    if first_chunk:
+                        # Replace spinner with reasoning immediately
+                        self._current_streaming = False
+                        await loading_task
+                        transcript.remove_last()
+                        first_chunk = False
+                    # Append or update a reasoning turn as it streams
+                    if transcript._turns and transcript._turns[-1].role == "reasoning":
+                        transcript.update_last(transcript._turns[-1].content + reasoning_content)
+                    else:
+                        transcript.append("reasoning", reasoning_content)
+                    continue
+
+                # Regular content (agent answer)
+                if first_chunk:
+                    self._current_streaming = False
+                    await loading_task
+                    transcript.remove_last()
+                    first_chunk = False
+
+                if not agent_started:
+                    # Start an agent turn we can update incrementally
+                    transcript.append("agent", "", agent_name)
+                    agent_started = True
+
+                processed_content = current_text.replace("\\n", "\n") if isinstance(current_text, str) else str(current_text)
+                current = (transcript._turns[-1].content if transcript._turns else "") + processed_content
+                transcript.update_last(current)
 
         except Exception as e:
+            # Stop loading animation
+            self._current_streaming = False
+            if loading_task and not loading_task.done():
+                await loading_task
+            # Remove loading indicator if still present
+            if first_chunk:
+                transcript.remove_last()
             # Show actual error message like original
             transcript.append("agent", f"Error: {e}", agent_name)
 
@@ -419,6 +606,7 @@ Note: Use --reasoning flag to enable reasoning by default"""
         """Handle chat commands using original simple_chat.py logic exactly."""
         parts = command.split()
         cmd = parts[0].lower()
+        arg = parts[1].lower() if len(parts) > 1 else ""
         
         if cmd == "help":
             self.action_show_help()
@@ -431,16 +619,121 @@ Note: Use --reasoning flag to enable reasoning by default"""
                 await self._set_agent(parts[1])
             else:
                 self._emit_system("Usage: /agent <id or number>")
+        elif cmd == "text":
+            if len(parts) > 1:
+                self._set_text_palette(parts[1])
+            else:
+                self._list_text_palettes()
         elif cmd == "clear":
             self.action_new_session()
         elif cmd == "reasoning":
             self._show_reasoning = not self._show_reasoning
             status = "enabled" if self._show_reasoning else "disabled"
             self._emit_system(f"Reasoning display {status}")
+        elif cmd == "vibe":
+            # Subcommands: start (default), stop, status
+            if arg == "stop":
+                self._vibe_write_command("stop")
+                self._emit_system("Vibe mode stopping…")
+                return
+            if arg == "status":
+                state = self._vibe_read_state()
+                if state:
+                    msg = f"Vibe status: {state.get('status','unknown')} pid={state.get('pid','?')} last_run={state.get('last_run','-')}"
+                else:
+                    msg = "Vibe status: not running"
+                self._emit_system(msg)
+                return
+
+            # Default: start
+            started = self._vibe_start_process_if_needed()
+            if started:
+                self._emit_system("Entering vibe mode (autonomous)")
+                self._vibe_write_command("start")
+            else:
+                self._emit_system("Vibe mode already running")
+            # Also send the immediate run prompt once
+            await self._send_message_to_agent(config.vibe_mode_prompt)
         elif cmd == "quit":
             self.exit()
         else:
             self._emit_system(f"Unknown command: /{cmd}. Type /help for available commands.")
+    
+    def _list_text_palettes(self) -> None:
+        """List available text color palettes."""
+        from theme import get_available_themes, _current_theme
+        palettes = get_available_themes()
+        listing = "Available text palettes:\n"
+        for palette in palettes:
+            marker = "→ " if palette == _current_theme else "  "
+            listing += f"{marker}{palette}\n"
+        listing += "\nUsage: /text <name>"
+        self._emit_system(listing)
+    
+    def _set_text_palette(self, palette_name: str) -> None:
+        """Set the active text color palette."""
+        from theme import set_theme, get_available_themes
+        palettes = get_available_themes()
+        if palette_name in palettes:
+            set_theme(palette_name)
+            self._save_theme_preference()
+            self.refresh_theme()
+            self._emit_system(f"Text palette set to: {palette_name}")
+        else:
+            self._emit_system(f"Unknown palette: {palette_name}\nAvailable palettes: {', '.join(palettes)}")
+
+    # ----- Vibe process helpers -----
+    def _vibe_control_path(self):
+        from pathlib import Path
+        return Path(config.vibe_control_file)
+
+    def _vibe_read_state(self):
+        import json
+        try:
+            path = self._vibe_control_path()
+            if not path.exists():
+                return {}
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+
+    def _vibe_write_command(self, command: str):
+        import json
+        state = self._vibe_read_state()
+        state.update({
+            "last_command": command,
+        })
+        try:
+            self._vibe_control_path().write_text(json.dumps(state, indent=2), encoding="utf-8")
+        except Exception:
+            pass
+
+    def _vibe_process_running(self, pid: int) -> bool:
+        if not pid:
+            return False
+        try:
+            # Cross-platform best-effort check
+            os.kill(pid, 0)  # type: ignore[attr-defined]
+            return True
+        except Exception:
+            return False
+
+    def _vibe_start_process_if_needed(self) -> bool:
+        state = self._vibe_read_state()
+        pid = state.get("pid")
+        if pid and self._vibe_process_running(pid):
+            return False
+
+        # Launch background process
+        try:
+            import subprocess, sys
+            script_path = str((Path(__file__).parent / "vibe_mode.py"))
+            # Use the same Python interpreter
+            subprocess.Popen([sys.executable, script_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=str(Path(__file__).parent))
+            return True
+        except Exception as e:
+            self._emit_system(f"Failed to start vibe mode: {e}")
+            return False
 
     async def _list_agents(self) -> None:
         """List available agents using original logic."""

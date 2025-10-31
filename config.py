@@ -39,6 +39,14 @@ class Config:
         self.letta_api_token = os.getenv("LETTA_API_TOKEN", "")
         self.display_name = os.getenv("DISPLAY_NAME", "User")
         self.default_agent_id = os.getenv("DEFAULT_AGENT_ID", "")
+        self.vibe_mode_prompt = os.getenv(
+            "VIBE_MODE_PROMPT",
+            "please i want you to discover candidates, check positions for each, research, form a thesis using my balances and positions, then open the trade with the proposed size, and tweet it, no need to monitor it since trade always get executed immeditely"
+        )
+        # Vibe autonomous mode configuration
+        self.vibe_interval_seconds = int(os.getenv("VIBE_INTERVAL_SECONDS", "180"))
+        self.vibe_log_file = os.getenv("VIBE_LOG_FILE", "vibe_mode.log")
+        self.vibe_control_file = os.getenv("VIBE_CONTROL_FILE", ".vibe_control.json")
 
     def validate(self) -> bool:
         """Validate required configuration"""

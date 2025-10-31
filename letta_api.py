@@ -105,31 +105,100 @@ class LettaClient:
             return
 
         try:
+            import concurrent.futures
+            import queue
+            
             message_data = [MessageCreate(role="user", content=content)]
-            response_stream = self.client.agents.messages.create_stream(
-                agent_id=self.current_agent_id,
-                messages=message_data,
-                stream_tokens=True  # Enable token-level streaming
-            )
-
-            for chunk in response_stream:
-                # Handle reasoning messages if enabled
-                if show_reasoning and hasattr(chunk, 'message_type'):
-                    if chunk.message_type == 'reasoning_message':
-                        reasoning_content = getattr(chunk, 'reasoning', '')
-                        if reasoning_content:
-                            # Yield reasoning content with special marker for display layer
-                            yield f"__REASONING__:{reasoning_content}"
-                    elif chunk.message_type == 'hidden_reasoning_message':
-                        hidden_content = getattr(chunk, 'hidden_reasoning', '')
-                        if hidden_content:
-                            yield f"[Hidden Thinking] {hidden_content}"
+            
+            # Create a queue to pass chunks from thread to async loop
+            chunk_queue = queue.Queue()
+            
+            def _stream_in_thread():
+                """Run the synchronous streaming in a thread."""
+                try:
+                    response_stream = self.client.agents.messages.create_stream(
+                        agent_id=self.current_agent_id,
+                        messages=message_data,
+                        stream_tokens=True
+                    )
+                    for chunk in response_stream:
+                        chunk_queue.put(('chunk', chunk))
+                    chunk_queue.put(('done', None))
+                except Exception as e:
+                    chunk_queue.put(('error', e))
+            
+            # Start streaming in a background thread
+            executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+            executor.submit(_stream_in_thread)
+            
+            # Read from queue and yield chunks
+            while True:
+                # Non-blocking queue check with timeout
+                try:
+                    msg_type, chunk = await asyncio.get_event_loop().run_in_executor(
+                        None, chunk_queue.get, True, 0.1
+                    )
+                except queue.Empty:
+                    continue
                 
-                # Yield content when present, regardless of message_type
-                if hasattr(chunk, 'content') and chunk.content:
-                    # Process literal newlines in content - convert \n to actual newlines
-                    processed_content = chunk.content.replace('\\n', '\n')
-                    yield processed_content
+                if msg_type == 'done':
+                    break
+                elif msg_type == 'error':
+                    yield f"Error: {chunk}"
+                    break
+                elif msg_type == 'chunk':
+                    # Handle reasoning messages if enabled
+                    reasoning_detected = False
+                    
+                    if show_reasoning:
+                        # Inspect chunk structure - handle both object attributes and dict keys
+                        message_type = None
+                        if hasattr(chunk, 'message_type'):
+                            message_type = chunk.message_type
+                        elif isinstance(chunk, dict):
+                            message_type = chunk.get('message_type')
+                        
+                        # Handle reasoning messages
+                        if message_type == 'reasoning_message':
+                            reasoning_content = None
+                            if hasattr(chunk, 'reasoning'):
+                                reasoning_content = chunk.reasoning
+                            elif hasattr(chunk, 'content'):
+                                reasoning_content = chunk.content
+                            elif isinstance(chunk, dict):
+                                reasoning_content = chunk.get('reasoning') or chunk.get('content')
+                            
+                            if reasoning_content:
+                                yield f"__REASONING__:{reasoning_content}"
+                                reasoning_detected = True
+                        elif message_type == 'hidden_reasoning_message':
+                            hidden_content = None
+                            if hasattr(chunk, 'hidden_reasoning'):
+                                hidden_content = chunk.hidden_reasoning
+                            elif hasattr(chunk, 'content'):
+                                hidden_content = chunk.content
+                            elif isinstance(chunk, dict):
+                                hidden_content = chunk.get('hidden_reasoning') or chunk.get('content')
+                            
+                            if hidden_content:
+                                yield f"__REASONING__:{hidden_content}"
+                                reasoning_detected = True
+                    
+                    # Yield content when present, but skip if it was already yielded as reasoning
+                    if not reasoning_detected:
+                        # Handle both object attributes and dict keys
+                        content = None
+                        if hasattr(chunk, 'content') and chunk.content:
+                            content = chunk.content
+                        elif isinstance(chunk, dict) and chunk.get('content'):
+                            content = chunk.get('content')
+                        
+                        if content:
+                            # Process literal newlines in content - convert \n to actual newlines
+                            processed_content = content.replace('\\n', '\n') if isinstance(content, str) else str(content)
+                            yield processed_content
+            
+            executor.shutdown(wait=False)
 
         except Exception as e:
             yield f"Error: {e}"
